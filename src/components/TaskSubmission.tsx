@@ -103,7 +103,7 @@ export const TaskSubmission = () => {
                     <SelectValue placeholder="Select a template or leave blank for custom task" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Template (Custom Task)</SelectItem>
+                    <SelectItem value="none">No Template (Custom Task)</SelectItem>
                     {templates.map(template => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.name}
@@ -153,7 +153,7 @@ export const TaskSubmission = () => {
               )}
 
               {/* Custom Task Input */}
-              {!selectedTemplate && (
+              {(selectedTemplate === '' || selectedTemplate === 'none') && (
                 <div className="space-y-2">
                   <Label>Task Description</Label>
                   <Textarea
