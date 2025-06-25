@@ -1,9 +1,10 @@
 
-import { Card, CardProps } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { forwardRef } from 'react';
+import * as React from 'react';
 
-interface EnhancedCardProps extends CardProps {
+interface EnhancedCardProps extends React.HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
   interactive?: boolean;
   loading?: boolean;

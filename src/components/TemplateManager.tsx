@@ -90,6 +90,7 @@ export const TemplateManager = () => {
     name: '',
     description: '',
     prompt: '',
+    category: 'master-data',
     inputs: [] as TemplateInput[]
   });
 
@@ -130,6 +131,7 @@ export const TemplateManager = () => {
       name: '',
       description: '',
       prompt: '',
+      category: 'master-data',
       inputs: []
     });
   };
@@ -140,6 +142,7 @@ export const TemplateManager = () => {
       name: template.name,
       description: template.description,
       prompt: template.prompt,
+      category: template.category,
       inputs: [...template.inputs]
     });
     setIsEditDialogOpen(true);
@@ -225,6 +228,7 @@ export const TemplateManager = () => {
     const template: Template = {
       id: `template_${Date.now()}`,
       ...newTemplate,
+      category: 'master-data', // Add default category
       usageCount: 0,
       createdAt: new Date().toISOString().split('T')[0]
     };
@@ -325,6 +329,25 @@ export const TemplateManager = () => {
                       value={newTemplate.description}
                       onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select 
+                      value={newTemplate.category} 
+                      onValueChange={(value) => setNewTemplate(prev => ({ ...prev, category: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TEMPLATE_CATEGORIES.filter(cat => cat.id !== 'all').map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">
@@ -467,6 +490,25 @@ export const TemplateManager = () => {
                       value={newTemplate.description}
                       onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select 
+                      value={newTemplate.category} 
+                      onValueChange={(value) => setNewTemplate(prev => ({ ...prev, category: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TEMPLATE_CATEGORIES.filter(cat => cat.id !== 'all').map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">
