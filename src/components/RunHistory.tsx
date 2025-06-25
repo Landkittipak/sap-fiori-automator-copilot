@@ -1,397 +1,226 @@
-import { useState, useEffect } from 'react';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
+  History, 
   Search, 
-  Download, 
-  Eye,
-  Calendar,
-  Clock,
+  Filter,
   CheckCircle,
   XCircle,
-  Loader,
-  RefreshCw,
-  Play
+  Clock,
+  Play,
+  Eye,
+  Download
 } from 'lucide-react';
 import { useDatabaseRunHistory } from '@/hooks/useDatabaseTaskExecution';
-import { type RunStatus } from '@/services/DatabaseTaskExecutionService';
+import { useState } from 'react';
 
 export const RunHistory = () => {
+  const { runs, refreshRuns } = useDatabaseRunHistory();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedRun, setSelectedRun] = useState<RunStatus | null>(null);
-  
-  const { runs } = useDatabaseRunHistory();
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'running':
-        return <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />;
-      case 'failed':
-        return <XCircle className="w-4 h-4 text-red-600" />;
-      case 'queued':
-        return <Clock className="w-4 h-4 text-yellow-600" />;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
-      case 'running':
-        return <Badge className="bg-blue-100 text-blue-800">Running</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
-      case 'queued':
-        return <Badge className="bg-yellow-100 text-yellow-800">Queued</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const formatDuration = (start: string, end?: string) => {
-    if (!end) return 'Running...';
-    const startTime = new Date(start).getTime();
-    const endTime = new Date(end).getTime();
-    const durationMs = endTime - startTime;
-    const minutes = Math.floor(durationMs / 60000);
-    const seconds = Math.floor((durationMs % 60000) / 1000);
-    return `${minutes}m ${seconds}s`;
-  };
-
-  const getTaskDescription = (run: RunStatus) => {
-    const firstLog = run.logs[0];
-    return firstLog || 'SAP Automation Task';
-  };
 
   const filteredRuns = runs.filter(run => {
-    const taskDesc = getTaskDescription(run);
-    const matchesSearch = taskDesc.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         run.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = run.logs[0]?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
     const matchesStatus = statusFilter === 'all' || run.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const activeRuns = filteredRuns.filter(run => run.status === 'running' || run.status === 'queued');
-  const completedRuns = filteredRuns.filter(run => run.status === 'completed' || run.status === 'failed');
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+          <CheckCircle className="w-3 h-3" />
+          Completed
+        </Badge>;
+      case 'failed':
+        return <Badge className="bg-red-100 text-red-800 flex items-center gap-1">
+          <XCircle className="w-3 h-3" />
+          Failed
+        </Badge>;
+      case 'running':
+        return <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
+          <Play className="w-3 h-3" />
+          Running
+        </Badge>;
+      default:
+        return <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          Queued
+        </Badge>;
+    }
+  };
+
+  const formatDuration = (startTime: string, endTime?: string) => {
+    if (!endTime) return 'Running...';
+    const start = new Date(startTime).getTime();
+    const end = new Date(endTime).getTime();
+    const duration = Math.round((end - start) / 1000 / 60 * 10) / 10;
+    return `${duration}min`;
+  };
+
+  const getTaskName = (run: any) => {
+    return run.logs[0] || 'SAP Automation Task';
+  };
 
   return (
-    <div className="p-8 space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">History & Monitor</h1>
-          <p className="text-gray-600 dark:text-gray-400">Track and monitor your SAP automation executions in real-time</p>
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <History className="w-8 h-8" />
+          Execution History
+        </h1>
+        <p className="text-gray-600">View and manage your automation task execution history</p>
+      </div>
+
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search executions..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
-        <Button variant="outline">
-          <Download className="w-4 h-4 mr-2" />
-          Export
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <Filter className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="running">Running</SelectItem>
+            <SelectItem value="failed">Failed</SelectItem>
+            <SelectItem value="queued">Queued</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={refreshRuns} variant="outline">
+          Refresh
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search tasks, run IDs..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="running">Running</SelectItem>
-                <SelectItem value="queued">Queued</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabs for Active vs History */}
-      <Tabs defaultValue="active" className="space-y-6">
+      <Tabs defaultValue="recent" className="w-full">
         <TabsList>
-          <TabsTrigger value="active" className="flex items-center gap-2">
-            <Play className="w-4 h-4" />
-            Active ({activeRuns.length})
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            History ({completedRuns.length})
-          </TabsTrigger>
+          <TabsTrigger value="recent">Recent Executions</TabsTrigger>
+          <TabsTrigger value="all">All History</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="active" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Executions</CardTitle>
-              <CardDescription>Currently running and queued tasks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {activeRuns.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No active executions</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {activeRuns.map((run) => (
-                    <div key={run.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-3 mb-2">
-                            {getStatusIcon(run.status)}
-                            <h3 className="font-medium text-gray-900 truncate">{getTaskDescription(run)}</h3>
-                            <Badge variant="outline" className="text-xs">
-                              {run.id}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <div className="flex items-center space-x-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>{new Date(run.startTime).toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{formatDuration(run.startTime, run.endTime)}</span>
-                            </div>
-                            <span>Progress: {run.progress}%</span>
-                          </div>
-                          {run.status === 'running' && (
-                            <div className="mt-2">
-                              <p className="text-sm text-blue-600">{run.currentStep}</p>
-                              <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                                <div 
-                                  className="bg-blue-600 h-1 rounded-full transition-all"
-                                  style={{ width: `${run.progress}%` }}
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          {getStatusBadge(run.status)}
-                          <div className="flex space-x-1">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => setSelectedRun(run)}>
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle>Execution Details</DialogTitle>
-                                  <DialogDescription>Run ID: {run.id}</DialogDescription>
-                                </DialogHeader>
-                                {selectedRun && (
-                                  <div className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <h4 className="font-medium mb-2">Task Details</h4>
-                                        <div className="space-y-2 text-sm">
-                                          <div><span className="font-medium">Task:</span> {getTaskDescription(selectedRun)}</div>
-                                          <div><span className="font-medium">Status:</span> {getStatusBadge(selectedRun.status)}</div>
-                                          <div><span className="font-medium">Current Step:</span> {selectedRun.currentStep}</div>
-                                          <div><span className="font-medium">Progress:</span> {selectedRun.progress}%</div>
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <h4 className="font-medium mb-2">Timing</h4>
-                                        <div className="space-y-2 text-sm">
-                                          <div><span className="font-medium">Start:</span> {new Date(selectedRun.startTime).toLocaleString()}</div>
-                                          {selectedRun.endTime && <div><span className="font-medium">End:</span> {new Date(selectedRun.endTime).toLocaleString()}</div>}
-                                          <div><span className="font-medium">Duration:</span> {formatDuration(selectedRun.startTime, selectedRun.endTime)}</div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    
-                                    {selectedRun.error && (
-                                      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                                        <h4 className="font-medium text-red-900 mb-2">Error</h4>
-                                        <p className="text-red-700 text-sm">{selectedRun.error}</p>
-                                      </div>
-                                    )}
-                                    
-                                    <div>
-                                      <h4 className="font-medium mb-3">Execution Log</h4>
-                                      <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
-                                        {selectedRun.logs.map((log, index) => (
-                                          <div key={index} className="text-sm text-gray-700 mb-1">
-                                            <span className="text-gray-500">{index + 1}.</span> {log}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    
-                                    <div>
-                                      <h4 className="font-medium mb-3">Screenshots ({selectedRun.screenshots.length})</h4>
-                                      <div className="grid grid-cols-3 gap-4">
-                                        {selectedRun.screenshots.map((screenshot, index) => (
-                                          <div key={index} className="bg-gray-200 h-24 rounded border flex items-center justify-center text-sm text-gray-500">
-                                            Step {index + 1}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </div>
-                      </div>
+        
+        <TabsContent value="recent" className="space-y-4">
+          {filteredRuns.slice(0, 10).length > 0 ? (
+            filteredRuns.slice(0, 10).map((run) => (
+              <Card key={run.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{getTaskName(run)}</CardTitle>
+                    {getStatusBadge(run.status)}
+                  </div>
+                  <CardDescription>
+                    Execution ID: {run.id}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Started</p>
+                      <p className="text-sm text-gray-600">
+                        {new Date(run.startTime).toLocaleString()}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Duration</p>
+                      <p className="text-sm text-gray-600">
+                        {formatDuration(run.startTime, run.endTime)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Progress</p>
+                      <p className="text-sm text-gray-600">{run.progress}%</p>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-gray-900 mb-1">Current Step</p>
+                    <p className="text-sm text-gray-600">{run.currentStep}</p>
+                  </div>
+
+                  {run.error && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+                      <p className="text-sm font-medium text-red-900">Error</p>
+                      <p className="text-sm text-red-700">{run.error}</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" size="sm">
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Details
+                    </Button>
+                    {run.status === 'completed' && (
+                      <Button variant="outline" size="sm">
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <History className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No execution history found</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Start by submitting a task to see execution history here
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Execution History</CardTitle>
-              <CardDescription>Completed and failed executions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {completedRuns.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No completed executions found.</p>
-                    <p className="text-sm">Start by submitting a task from the Task Submission page.</p>
+        <TabsContent value="all" className="space-y-4">
+          {filteredRuns.length > 0 ? (
+            filteredRuns.map((run) => (
+              <Card key={run.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{getTaskName(run)}</CardTitle>
+                    {getStatusBadge(run.status)}
                   </div>
-                ) : (
-                  completedRuns.map((run) => (
-                    <div key={run.id} className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-3 mb-2">
-                            {getStatusIcon(run.status)}
-                            <h3 className="font-medium text-gray-900 truncate">{getTaskDescription(run)}</h3>
-                            <Badge variant="outline" className="text-xs">
-                              {run.id}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <div className="flex items-center space-x-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>{new Date(run.startTime).toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{formatDuration(run.startTime, run.endTime)}</span>
-                            </div>
-                            <span>Progress: {run.progress}%</span>
-                          </div>
-                          {run.status === 'running' && (
-                            <div className="mt-2">
-                              <p className="text-sm text-blue-600">{run.currentStep}</p>
-                              <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                                <div 
-                                  className="bg-blue-600 h-1 rounded-full transition-all"
-                                  style={{ width: `${run.progress}%` }}
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          {getStatusBadge(run.status)}
-                          <div className="flex space-x-1">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => setSelectedRun(run)}>
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle>Execution Details</DialogTitle>
-                                  <DialogDescription>Run ID: {run.id}</DialogDescription>
-                                </DialogHeader>
-                                {selectedRun && (
-                                  <div className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <h4 className="font-medium mb-2">Task Details</h4>
-                                        <div className="space-y-2 text-sm">
-                                          <div><span className="font-medium">Task:</span> {getTaskDescription(selectedRun)}</div>
-                                          <div><span className="font-medium">Status:</span> {getStatusBadge(selectedRun.status)}</div>
-                                          <div><span className="font-medium">Current Step:</span> {selectedRun.currentStep}</div>
-                                          <div><span className="font-medium">Progress:</span> {selectedRun.progress}%</div>
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <h4 className="font-medium mb-2">Timing</h4>
-                                        <div className="space-y-2 text-sm">
-                                          <div><span className="font-medium">Start:</span> {new Date(selectedRun.startTime).toLocaleString()}</div>
-                                          {selectedRun.endTime && <div><span className="font-medium">End:</span> {new Date(selectedRun.endTime).toLocaleString()}</div>}
-                                          <div><span className="font-medium">Duration:</span> {formatDuration(selectedRun.startTime, selectedRun.endTime)}</div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    
-                                    {selectedRun.error && (
-                                      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                                        <h4 className="font-medium text-red-900 mb-2">Error</h4>
-                                        <p className="text-red-700 text-sm">{selectedRun.error}</p>
-                                      </div>
-                                    )}
-                                    
-                                    <div>
-                                      <h4 className="font-medium mb-3">Execution Log</h4>
-                                      <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
-                                        {selectedRun.logs.map((log, index) => (
-                                          <div key={index} className="text-sm text-gray-700 mb-1">
-                                            <span className="text-gray-500">{index + 1}.</span> {log}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    
-                                    <div>
-                                      <h4 className="font-medium mb-3">Screenshots ({selectedRun.screenshots.length})</h4>
-                                      <div className="grid grid-cols-3 gap-4">
-                                        {selectedRun.screenshots.map((screenshot, index) => (
-                                          <div key={index} className="bg-gray-200 h-24 rounded border flex items-center justify-center text-sm text-gray-500">
-                                            Step {index + 1}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </div>
-                      </div>
+                  <CardDescription>
+                    {new Date(run.startTime).toLocaleString()} • {formatDuration(run.startTime, run.endTime)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-gray-600">Progress: {run.progress}%</p>
+                      <p className="text-sm text-gray-600">{run.currentStep}</p>
                     </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm">
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <History className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No executions found</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
