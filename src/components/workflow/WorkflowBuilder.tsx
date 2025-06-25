@@ -20,14 +20,9 @@ import {
   ArrowDown
 } from 'lucide-react';
 import { workflowService, type WorkflowStepConfig } from '@/services/WorkflowService';
+import type { Database } from '@/integrations/supabase/types';
 
-interface WorkflowStep {
-  id: string;
-  template_id: string;
-  step_order: number;
-  step_type: 'action' | 'validation' | 'screenshot' | 'condition' | 'loop';
-  step_config: WorkflowStepConfig;
-}
+type WorkflowStep = Database['public']['Tables']['workflow_steps']['Row'];
 
 interface WorkflowBuilderProps {
   templateId: string;

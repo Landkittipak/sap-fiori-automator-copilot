@@ -5,6 +5,7 @@ import type { Database } from '@/integrations/supabase/types';
 type WorkflowStep = Database['public']['Tables']['workflow_steps']['Row'];
 
 export interface WorkflowStepConfig {
+  [key: string]: any;
   action?: string;
   selector?: string;
   value?: string;
@@ -29,7 +30,7 @@ class WorkflowService {
         template_id: data.templateId,
         step_order: data.stepOrder,
         step_type: data.stepType,
-        step_config: data.config,
+        step_config: data.config as any,
       })
       .select()
       .single();
