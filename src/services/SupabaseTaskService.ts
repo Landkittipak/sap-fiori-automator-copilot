@@ -92,7 +92,7 @@ class SupabaseTaskService {
       .single();
 
     if (error) return null;
-    return data;
+    return data as DatabaseTaskRun;
   }
 
   async getUserTaskRuns(): Promise<DatabaseTaskRun[]> {
@@ -106,7 +106,7 @@ class SupabaseTaskService {
       .order('start_time', { ascending: false });
 
     if (error) return [];
-    return data || [];
+    return (data || []) as DatabaseTaskRun[];
   }
 
   async getExecutionLogs(runId: string): Promise<DatabaseExecutionLog[]> {
