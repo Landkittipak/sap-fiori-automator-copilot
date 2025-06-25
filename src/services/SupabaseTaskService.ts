@@ -1,12 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface DatabaseTaskRun {
   id: string;
   user_id: string;
   template_id?: string;
   template_name?: string;
-  template_inputs?: Record<string, any>;
+  template_inputs?: Json;
   custom_task?: string;
   status: 'queued' | 'running' | 'completed' | 'failed';
   current_step: string;

@@ -95,14 +95,17 @@ class DatabaseTaskExecutionService {
       { description: 'Authenticating user session', duration: 1000, canFail: true, errorMessage: 'Authentication failed' },
     ];
 
+    // Safely access template_inputs as a record
+    const templateInputs = taskData.template_inputs || {};
+
     if (taskData.template_name === 'Stock Transfer') {
       return [
         ...baseSteps,
         { description: 'Opening Stock Transfer application', duration: 2000, canFail: false },
-        { description: `Entering material code: ${taskData.template_inputs?.material || 'N/A'}`, duration: 1000, canFail: false },
-        { description: `Setting quantity to: ${taskData.template_inputs?.qty || 'N/A'}`, duration: 800, canFail: false },
-        { description: `Selecting source plant: ${taskData.template_inputs?.from_plant || 'N/A'}`, duration: 1000, canFail: false },
-        { description: `Selecting destination plant: ${taskData.template_inputs?.to_plant || 'N/A'}`, duration: 1000, canFail: false },
+        { description: `Entering material code: ${templateInputs.material || 'N/A'}`, duration: 1000, canFail: false },
+        { description: `Setting quantity to: ${templateInputs.qty || 'N/A'}`, duration: 800, canFail: false },
+        { description: `Selecting source plant: ${templateInputs.from_plant || 'N/A'}`, duration: 1000, canFail: false },
+        { description: `Selecting destination plant: ${templateInputs.to_plant || 'N/A'}`, duration: 1000, canFail: false },
         { description: 'Validating transfer details', duration: 1500, canFail: true, errorMessage: 'Validation failed: Insufficient stock' },
         { description: 'Executing stock transfer', duration: 2000, canFail: true, errorMessage: 'Transfer execution failed' },
         { description: 'Confirming transfer completion', duration: 1000, canFail: false },
@@ -111,16 +114,16 @@ class DatabaseTaskExecutionService {
       return [
         ...baseSteps,
         { description: 'Opening Material Master application', duration: 2000, canFail: false },
-        { description: `Searching for material: ${taskData.template_inputs?.material || 'N/A'}`, duration: 1500, canFail: true, errorMessage: 'Material not found' },
+        { description: `Searching for material: ${templateInputs.material || 'N/A'}`, duration: 1500, canFail: true, errorMessage: 'Material not found' },
         { description: 'Navigating to MRP2 tab', duration: 1000, canFail: false },
-        { description: `Updating lead time to: ${taskData.template_inputs?.new_days || 'N/A'} days`, duration: 1500, canFail: false },
+        { description: `Updating lead time to: ${templateInputs.new_days || 'N/A'} days`, duration: 1500, canFail: false },
         { description: 'Saving material master changes', duration: 2000, canFail: true, errorMessage: 'Save operation failed' },
       ];
     } else if (taskData.template_name === 'Stock Check') {
       return [
         ...baseSteps,
         { description: 'Opening Stock Overview application', duration: 2000, canFail: false },
-        { description: `Looking up material: ${taskData.template_inputs?.material || 'N/A'}`, duration: 1500, canFail: true, errorMessage: 'Material not found in system' },
+        { description: `Looking up material: ${templateInputs.material || 'N/A'}`, duration: 1500, canFail: true, errorMessage: 'Material not found in system' },
         { description: 'Retrieving current stock levels', duration: 1000, canFail: false },
         { description: 'Taking screenshot of stock information', duration: 500, canFail: false },
       ];
