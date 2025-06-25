@@ -6,7 +6,6 @@ import {
   FileText, 
   History, 
   Settings,
-  BarChart3,
   Monitor
 } from 'lucide-react';
 
@@ -20,9 +19,7 @@ const menuItems = [
   { id: 'tasks', label: 'Quick Tasks', icon: Zap },
   { id: 'workflows', label: 'Workflows', icon: GitBranch },
   { id: 'templates', label: 'Templates', icon: FileText },
-  { id: 'history', label: 'History', icon: History },
-  { id: 'monitor', label: 'Monitor', icon: Monitor },
-  { id: 'stats', label: 'Statistics', icon: BarChart3 },
+  { id: 'history', label: 'History & Monitor', icon: History },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -48,7 +45,7 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
               >
                 <Icon className="w-5 h-5" />
                 <span>{item.label}</span>
-              </button>
+              </div>
             );
           })}
         </nav>
