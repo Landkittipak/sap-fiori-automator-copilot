@@ -106,7 +106,7 @@ export const RunHistory = () => {
       </div>
 
       <Tabs defaultValue="recent" className="w-full">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="recent">Recent Executions</TabsTrigger>
           <TabsTrigger value="all">All History</TabsTrigger>
         </TabsList>
