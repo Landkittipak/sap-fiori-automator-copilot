@@ -26,11 +26,14 @@ import {
 import { useDatabaseRunHistory } from '@/hooks/useDatabaseTaskExecution';
 import { useToast } from '@/hooks/use-toast';
 
+type WidgetType = 'chart' | 'metric' | 'table';
+type ChartType = 'bar' | 'line' | 'pie' | 'area';
+
 interface Widget {
   id: string;
-  type: 'chart' | 'metric' | 'table';
+  type: WidgetType;
   title: string;
-  chartType?: 'bar' | 'line' | 'pie' | 'area';
+  chartType?: ChartType;
   dataSource: string;
   filters: any[];
   position: { x: number; y: number; w: number; h: number };
@@ -54,21 +57,26 @@ export const CustomReportBuilder = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [newWidget, setNewWidget] = useState<Partial<Widget>>({});
+  const [newWidget, setNewWidget] = useState<{
+    type?: WidgetType;
+    title?: string;
+    chartType?: ChartType;
+    dataSource?: string;
+  }>({});
   const { runs } = useDatabaseRunHistory();
   const { toast } = useToast();
 
   const widgetTypes = [
-    { value: 'chart', label: 'Chart', icon: BarChart3 },
-    { value: 'metric', label: 'Metric Card', icon: Calendar },
-    { value: 'table', label: 'Data Table', icon: Filter },
+    { value: 'chart' as const, label: 'Chart', icon: BarChart3 },
+    { value: 'metric' as const, label: 'Metric Card', icon: Calendar },
+    { value: 'table' as const, label: 'Data Table', icon: Filter },
   ];
 
   const chartTypes = [
-    { value: 'bar', label: 'Bar Chart', icon: BarChart3 },
-    { value: 'line', label: 'Line Chart', icon: LineChart },
-    { value: 'pie', label: 'Pie Chart', icon: PieChart },
-    { value: 'area', label: 'Area Chart', icon: BarChart3 },
+    { value: 'bar' as const, label: 'Bar Chart', icon: BarChart3 },
+    { value: 'line' as const, label: 'Line Chart', icon: LineChart },
+    { value: 'pie' as const, label: 'Pie Chart', icon: PieChart },
+    { value: 'area' as const, label: 'Area Chart', icon: BarChart3 },
   ];
 
   const dataSources = [
@@ -108,9 +116,9 @@ export const CustomReportBuilder = () => {
 
     const widget: Widget = {
       id: `widget_${Date.now()}`,
-      type: newWidget.type as 'chart' | 'metric' | 'table',
+      type: newWidget.type,
       title: newWidget.title,
-      chartType: newWidget.chartType as 'bar' | 'line' | 'pie' | 'area',
+      chartType: newWidget.chartType,
       dataSource: newWidget.dataSource || 'executions',
       filters: [],
       position: { x: 0, y: 0, w: 6, h: 4 },
@@ -301,7 +309,7 @@ export const CustomReportBuilder = () => {
                       <Label>Widget Type</Label>
                       <Select
                         value={newWidget.type}
-                        onValueChange={(value) => setNewWidget({ ...newWidget, type: value })}
+                        onValueChange={(value: WidgetType) => setNewWidget({ ...newWidget, type: value })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select widget type" />
@@ -324,7 +332,7 @@ export const CustomReportBuilder = () => {
                         <Label>Chart Type</Label>
                         <Select
                           value={newWidget.chartType}
-                          onValueChange={(value) => setNewWidget({ ...newWidget, chartType: value })}
+                          onValueChange={(value: ChartType) => setNewWidget({ ...newWidget, chartType: value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select chart type" />
