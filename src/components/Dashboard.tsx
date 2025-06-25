@@ -22,7 +22,6 @@ import { AnalyticsDashboard } from './analytics/AnalyticsDashboard';
 import { TemplateMarketplace } from './marketplace/TemplateMarketplace';
 import { BulkOperations } from './bulk/BulkOperations';
 import { ExportFunctionality } from './export/ExportFunctionality';
-import { UserProfile } from './profile/UserProfile';
 
 export const Dashboard = () => {
   const { runs } = useDatabaseRunHistory();
@@ -275,7 +274,12 @@ export const Dashboard = () => {
         </TabsContent>
 
         <TabsContent value="profile">
-          <UserProfile />
+          <div className="p-8">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold">Profile Settings</h2>
+              <p className="text-muted-foreground mt-2">Profile functionality has been moved to Settings</p>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
