@@ -18,6 +18,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Draggable } from '@/components/ui/draggable';
 
 interface WorkflowStep {
   id: string;
@@ -111,6 +112,25 @@ export const WorkflowBuilder = () => {
     console.log('Added step:', newStep);
   };
 
+  const reorderSteps = (dragIndex: number, hoverIndex: number) => {
+    if (!currentWorkflow) return;
+
+    const dragStep = currentWorkflow.steps[dragIndex];
+    const newSteps = [...currentWorkflow.steps];
+    newSteps.splice(dragIndex, 1);
+    newSteps.splice(hoverIndex, 0, dragStep);
+
+    setCurrentWorkflow({
+      ...currentWorkflow,
+      steps: newSteps,
+    });
+
+    toast({
+      title: "Step Reordered",
+      description: "Workflow step order has been updated.",
+    });
+  };
+
   const saveWorkflow = () => {
     if (!currentWorkflow) return;
 
@@ -146,7 +166,7 @@ export const WorkflowBuilder = () => {
           <h2 className="text-2xl font-bold text-gray-900">Workflow Builder</h2>
           <p className="text-gray-600">Create complex, multi-step automation sequences</p>
         </div>
-        <Button onClick={createNewWorkflow}>
+        <Button onClick={createNewWorkflow} className="hover:scale-105 transition-transform">
           <Plus className="w-4 h-4 mr-2" />
           New Workflow
         </Button>
@@ -195,7 +215,7 @@ export const WorkflowBuilder = () => {
                     <div className="flex gap-2">
                       {isEditing ? (
                         <>
-                          <Button onClick={saveWorkflow} size="sm">
+                          <Button onClick={saveWorkflow} size="sm" className="hover:scale-105 transition-transform">
                             <Save className="w-4 h-4 mr-2" />
                             Save
                           </Button>
@@ -209,7 +229,7 @@ export const WorkflowBuilder = () => {
                             <Settings className="w-4 h-4 mr-2" />
                             Edit
                           </Button>
-                          <Button size="sm" onClick={() => executeWorkflow(currentWorkflow)}>
+                          <Button size="sm" onClick={() => executeWorkflow(currentWorkflow)} className="hover:scale-105 transition-transform">
                             <Play className="w-4 h-4 mr-2" />
                             Run
                           </Button>
@@ -219,25 +239,33 @@ export const WorkflowBuilder = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {/* Workflow Steps */}
+                      {/* Enhanced Workflow Steps with Drag & Drop */}
                       {currentWorkflow.steps.map((step, index) => {
                         const stepTypeInfo = stepTypes.find(t => t.type === step.type);
                         const Icon = stepTypeInfo?.icon || Play;
 
                         return (
                           <div key={step.id}>
-                            <div className="flex items-center gap-4 p-4 border rounded-lg">
-                              <div className={`p-2 rounded ${stepTypeInfo?.color} text-white`}>
-                                <Icon className="w-5 h-5" />
+                            <Draggable
+                              id={step.id}
+                              index={index}
+                              onReorder={reorderSteps}
+                              disabled={!isEditing}
+                              className="pl-6"
+                            >
+                              <div className="flex items-center gap-4 p-4 border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+                                <div className={`p-2 rounded ${stepTypeInfo?.color} text-white`}>
+                                  <Icon className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-medium">{step.name}</h4>
+                                  <p className="text-sm text-gray-600">{step.description || stepTypeInfo?.description}</p>
+                                  <Badge variant="outline" className="mt-1">
+                                    {stepTypeInfo?.name}
+                                  </Badge>
+                                </div>
                               </div>
-                              <div className="flex-1">
-                                <h4 className="font-medium">{step.name}</h4>
-                                <p className="text-sm text-gray-600">{step.description || stepTypeInfo?.description}</p>
-                                <Badge variant="outline" className="mt-1">
-                                  {stepTypeInfo?.name}
-                                </Badge>
-                              </div>
-                            </div>
+                            </Draggable>
                             {index < currentWorkflow.steps.length - 1 && (
                               <div className="flex justify-center my-2">
                                 <ArrowRight className="w-5 h-5 text-gray-400" />
@@ -247,12 +275,18 @@ export const WorkflowBuilder = () => {
                         );
                       })}
 
-                      {/* Empty State */}
+                      {/* Enhanced Empty State */}
                       {currentWorkflow.steps.length === 0 && (
-                        <div className="text-center py-12 text-gray-500">
+                        <div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
                           <GitBranch className="w-12 h-12 mx-auto mb-4 opacity-50" />
                           <p className="text-lg font-medium mb-2">Empty Workflow</p>
-                          <p className="text-sm">Add steps from the panel to build your workflow</p>
+                          <p className="text-sm mb-4">Add steps from the panel to build your workflow</p>
+                          {isEditing && (
+                            <Button variant="outline" onClick={() => addStep('action')}>
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add First Step
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -260,7 +294,7 @@ export const WorkflowBuilder = () => {
                 </Card>
               </div>
 
-              {/* Properties Panel */}
+              {/* Enhanced Properties Panel */}
               <div className="space-y-6">
                 {/* Step Types */}
                 {isEditing && (
@@ -277,7 +311,7 @@ export const WorkflowBuilder = () => {
                             <Button
                               key={stepType.type}
                               variant="outline"
-                              className="w-full justify-start"
+                              className="w-full justify-start hover:scale-105 transition-transform"
                               onClick={() => {
                                 console.log('Adding step type:', stepType.type);
                                 addStep(stepType.type);
@@ -298,7 +332,7 @@ export const WorkflowBuilder = () => {
                   </Card>
                 )}
 
-                {/* Workflow Info */}
+                {/* Enhanced Workflow Info */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Workflow Info</CardTitle>
@@ -306,7 +340,7 @@ export const WorkflowBuilder = () => {
                   <CardContent className="space-y-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Steps:</span>
-                      <span>{currentWorkflow.steps.length}</span>
+                      <span className="font-medium">{currentWorkflow.steps.length}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Status:</span>

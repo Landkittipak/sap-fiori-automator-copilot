@@ -15,9 +15,14 @@ import {
   FileText, 
   Play,
   Copy,
-  Eye
+  Eye,
+  Search,
+  Filter
 } from 'lucide-react';
 import { TemplateEditor } from './templates/TemplateEditor';
+import { TemplateCategories, TEMPLATE_CATEGORIES } from './templates/TemplateCategories';
+import { EnhancedCard } from './ui/enhanced-card';
+import { useLocalStorage } from '@/lib/localStorage';
 
 interface TemplateInput {
   id: string;
@@ -35,10 +40,14 @@ interface Template {
   inputs: TemplateInput[];
   usageCount: number;
   createdAt: string;
+  category: string;
 }
 
 export const TemplateManager = () => {
   const { toast } = useToast();
+  const [selectedCategory, setSelectedCategory] = useLocalStorage('template_category', 'all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useLocalStorage('template_view_mode', 'grid');
   
   const [templates, setTemplates] = useState<Template[]>([
     {
@@ -53,7 +62,8 @@ export const TemplateManager = () => {
         { id: 'to_plant', label: 'To Plant', type: 'select', options: ['1010', '1020', '1030'] },
       ],
       usageCount: 24,
-      createdAt: '2024-01-15'
+      createdAt: '2024-01-15',
+      category: 'stock'
     },
     {
       id: 'lead-time',
@@ -65,7 +75,8 @@ export const TemplateManager = () => {
         { id: 'new_days', label: 'Lead Time (Days)', type: 'number', placeholder: '14' },
       ],
       usageCount: 12,
-      createdAt: '2024-01-20'
+      createdAt: '2024-01-20',
+      category: 'master-data'
     }
   ]);
 
@@ -81,6 +92,21 @@ export const TemplateManager = () => {
     prompt: '',
     inputs: [] as TemplateInput[]
   });
+
+  const filteredTemplates = templates.filter(template => {
+    const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
+    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         template.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const getCategoryCounts = () => {
+    const counts: Record<string, number> = { all: templates.length };
+    templates.forEach(template => {
+      counts[template.category] = (counts[template.category] || 0) + 1;
+    });
+    return counts;
+  };
 
   const handleRunTemplate = (template: Template, inputs: Record<string, any>) => {
     // Increment usage count
@@ -225,6 +251,7 @@ export const TemplateManager = () => {
           <Button 
             variant="outline" 
             onClick={() => setSelectedTemplate(null)}
+            className="hover:scale-105 transition-transform"
           >
             ← Back to Templates
           </Button>
@@ -239,333 +266,385 @@ export const TemplateManager = () => {
 
   return (
     <div className="p-8 space-y-8">
-      {/* Header */}
+      {/* Enhanced Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Templates</h1>
           <p className="text-gray-600">Create and manage reusable SAP automation templates</p>
         </div>
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetNewTemplate}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Template
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+            >
+              Grid
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Template</DialogTitle>
-              <DialogDescription>
-                Build a reusable template with dynamic inputs for SAP automation tasks
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6">
-              {/* Basic Info */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Template Name</Label>
-                  <Input
-                    placeholder="e.g., Stock Transfer"
-                    value={newTemplate.name}
-                    onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Input
-                    placeholder="Brief description of what this template does"
-                    value={newTemplate.description}
-                    onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Prompt Template</Label>
-                  <Textarea
-                    placeholder="Write your automation prompt with placeholders like {material}, {quantity}, etc."
-                    value={newTemplate.prompt}
-                    onChange={(e) => setNewTemplate(prev => ({ ...prev, prompt: e.target.value }))}
-                    rows={3}
-                  />
-                  {newTemplate.prompt && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Detected placeholders:</span>{' '}
-                      {extractPlaceholders(newTemplate.prompt).join(', ') || 'None'}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Input Configuration */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Input Fields</Label>
-                  <Button variant="outline" size="sm" onClick={addInput}>
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add Input
-                  </Button>
-                </div>
-                
-                {newTemplate.inputs.map((input, index) => (
-                  <div key={input.id} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Input {index + 1}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => removeInput(index)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label>ID</Label>
-                        <Input
-                          placeholder="field_name"
-                          value={input.id}
-                          onChange={(e) => updateInput(index, 'id', e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Label</Label>
-                        <Input
-                          placeholder="Field Label"
-                          value={input.label}
-                          onChange={(e) => updateInput(index, 'label', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label>Type</Label>
-                        <Select 
-                          value={input.type} 
-                          onValueChange={(value) => updateInput(index, 'type', value as 'text' | 'number' | 'select')}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">Text</SelectItem>
-                            <SelectItem value="number">Number</SelectItem>
-                            <SelectItem value="select">Select</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Placeholder</Label>
-                        <Input
-                          placeholder="Placeholder text"
-                          value={input.placeholder || ''}
-                          onChange={(e) => updateInput(index, 'placeholder', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    
-                    {input.type === 'select' && (
-                      <div className="space-y-1">
-                        <Label>Options (comma-separated)</Label>
-                        <Input
-                          placeholder="Option1, Option2, Option3"
-                          value={input.options?.join(', ') || ''}
-                          onChange={(e) => updateInput(index, 'options', e.target.value.split(',').map(s => s.trim()))}
-                        />
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </Button>
+          </div>
+          
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetNewTemplate} className="hover:scale-105 transition-transform">
+                <Plus className="w-4 h-4 mr-2" />
+                New Template
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New Template</DialogTitle>
+                <DialogDescription>
+                  Build a reusable template with dynamic inputs for SAP automation tasks
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                {/* Basic Info */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Template Name</Label>
+                    <Input
+                      placeholder="e.g., Stock Transfer"
+                      value={newTemplate.name}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Input
+                      placeholder="Brief description of what this template does"
+                      value={newTemplate.description}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Prompt Template</Label>
+                    <Textarea
+                      placeholder="Write your automation prompt with placeholders like {material}, {quantity}, etc."
+                      value={newTemplate.prompt}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, prompt: e.target.value }))}
+                      rows={3}
+                    />
+                    {newTemplate.prompt && (
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Detected placeholders:</span>{' '}
+                        {extractPlaceholders(newTemplate.prompt).join(', ') || 'None'}
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={saveTemplate} disabled={!newTemplate.name || !newTemplate.prompt}>
-                  Create Template
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Dialog - Enhanced with input field configuration */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Template</DialogTitle>
-              <DialogDescription>
-                Modify your existing template configuration
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Template Name</Label>
-                  <Input
-                    placeholder="e.g., Stock Transfer"
-                    value={newTemplate.name}
-                    onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
-                  />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Input
-                    placeholder="Brief description of what this template does"
-                    value={newTemplate.description}
-                    onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Prompt Template</Label>
-                  <Textarea
-                    placeholder="Write your automation prompt with placeholders like {material}, {quantity}, etc."
-                    value={newTemplate.prompt}
-                    onChange={(e) => setNewTemplate(prev => ({ ...prev, prompt: e.target.value }))}
-                    rows={3}
-                  />
-                  {newTemplate.prompt && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Detected placeholders:</span>{' '}
-                      {extractPlaceholders(newTemplate.prompt).join(', ') || 'None'}
+
+                {/* Input Configuration */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Label>Input Fields</Label>
+                    <Button variant="outline" size="sm" onClick={addInput}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add Input
+                    </Button>
+                  </div>
+                  
+                  {newTemplate.inputs.map((input, index) => (
+                    <div key={input.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Input {index + 1}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => removeInput(index)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label>ID</Label>
+                          <Input
+                            placeholder="field_name"
+                            value={input.id}
+                            onChange={(e) => updateInput(index, 'id', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Label</Label>
+                          <Input
+                            placeholder="Field Label"
+                            value={input.label}
+                            onChange={(e) => updateInput(index, 'label', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label>Type</Label>
+                          <Select 
+                            value={input.type} 
+                            onValueChange={(value) => updateInput(index, 'type', value as 'text' | 'number' | 'select')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="text">Text</SelectItem>
+                              <SelectItem value="number">Number</SelectItem>
+                              <SelectItem value="select">Select</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Placeholder</Label>
+                          <Input
+                            placeholder="Placeholder text"
+                            value={input.placeholder || ''}
+                            onChange={(e) => updateInput(index, 'placeholder', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      {input.type === 'select' && (
+                        <div className="space-y-1">
+                          <Label>Options (comma-separated)</Label>
+                          <Input
+                            placeholder="Option1, Option2, Option3"
+                            value={input.options?.join(', ') || ''}
+                            onChange={(e) => updateInput(index, 'options', e.target.value.split(',').map(s => s.trim()))}
+                          />
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
 
-              {/* Input Configuration for Edit Dialog */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Input Fields</Label>
-                  <Button variant="outline" size="sm" onClick={addInput}>
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add Input
+                <div className="flex justify-end space-x-3">
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={saveTemplate} disabled={!newTemplate.name || !newTemplate.prompt}>
+                    Create Template
                   </Button>
                 </div>
-                
-                {newTemplate.inputs.map((input, index) => (
-                  <div key={input.id} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Input {index + 1}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => removeInput(index)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label>ID</Label>
-                        <Input
-                          placeholder="field_name"
-                          value={input.id}
-                          onChange={(e) => updateInput(index, 'id', e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Label</Label>
-                        <Input
-                          placeholder="Field Label"
-                          value={input.label}
-                          onChange={(e) => updateInput(index, 'label', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label>Type</Label>
-                        <Select 
-                          value={input.type} 
-                          onValueChange={(value) => updateInput(index, 'type', value as 'text' | 'number' | 'select')}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">Text</SelectItem>
-                            <SelectItem value="number">Number</SelectItem>
-                            <SelectItem value="select">Select</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Placeholder</Label>
-                        <Input
-                          placeholder="Placeholder text"
-                          value={input.placeholder || ''}
-                          onChange={(e) => updateInput(index, 'placeholder', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    
-                    {input.type === 'select' && (
-                      <div className="space-y-1">
-                        <Label>Options (comma-separated)</Label>
-                        <Input
-                          placeholder="Option1, Option2, Option3"
-                          value={input.options?.join(', ') || ''}
-                          onChange={(e) => updateInput(index, 'options', e.target.value.split(',').map(s => s.trim()))}
-                        />
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Dialog - Enhanced with input field configuration */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Template</DialogTitle>
+                <DialogDescription>
+                  Modify your existing template configuration
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Template Name</Label>
+                    <Input
+                      placeholder="e.g., Stock Transfer"
+                      value={newTemplate.name}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Input
+                      placeholder="Brief description of what this template does"
+                      value={newTemplate.description}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Prompt Template</Label>
+                    <Textarea
+                      placeholder="Write your automation prompt with placeholders like {material}, {quantity}, etc."
+                      value={newTemplate.prompt}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, prompt: e.target.value }))}
+                      rows={3}
+                    />
+                    {newTemplate.prompt && (
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Detected placeholders:</span>{' '}
+                        {extractPlaceholders(newTemplate.prompt).join(', ') || 'None'}
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
+                </div>
 
-              <div className="flex justify-end space-x-3">
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={saveEdit} disabled={!newTemplate.name || !newTemplate.prompt}>
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+                {/* Input Configuration for Edit Dialog */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Label>Input Fields</Label>
+                    <Button variant="outline" size="sm" onClick={addInput}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add Input
+                    </Button>
+                  </div>
+                  
+                  {newTemplate.inputs.map((input, index) => (
+                    <div key={input.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Input {index + 1}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => removeInput(index)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label>ID</Label>
+                          <Input
+                            placeholder="field_name"
+                            value={input.id}
+                            onChange={(e) => updateInput(index, 'id', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Label</Label>
+                          <Input
+                            placeholder="Field Label"
+                            value={input.label}
+                            onChange={(e) => updateInput(index, 'label', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label>Type</Label>
+                          <Select 
+                            value={input.type} 
+                            onValueChange={(value) => updateInput(index, 'type', value as 'text' | 'number' | 'select')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="text">Text</SelectItem>
+                              <SelectItem value="number">Number</SelectItem>
+                              <SelectItem value="select">Select</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Placeholder</Label>
+                          <Input
+                            placeholder="Placeholder text"
+                            value={input.placeholder || ''}
+                            onChange={(e) => updateInput(index, 'placeholder', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      {input.type === 'select' && (
+                        <div className="space-y-1">
+                          <Label>Options (comma-separated)</Label>
+                          <Input
+                            placeholder="Option1, Option2, Option3"
+                            value={input.options?.join(', ') || ''}
+                            onChange={(e) => updateInput(index, 'options', e.target.value.split(',').map(s => s.trim()))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
 
-        {/* Preview Dialog */}
-        <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Template Preview</DialogTitle>
-              <DialogDescription>
-                See how this template will look when users fill it out
-              </DialogDescription>
-            </DialogHeader>
-            
-            {previewTemplate && (
-              <TemplateEditor 
-                template={previewTemplate} 
-                onRun={() => {
-                  setIsPreviewDialogOpen(false);
-                  toast({
-                    title: "Preview Mode",
-                    description: "This was just a preview. Click 'Use' on the template card to actually run it.",
-                  });
-                }}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
+                <div className="flex justify-end space-x-3">
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={saveEdit} disabled={!newTemplate.name || !newTemplate.prompt}>
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Preview Dialog */}
+          <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Template Preview</DialogTitle>
+                <DialogDescription>
+                  See how this template will look when users fill it out
+                </DialogDescription>
+              </DialogHeader>
+              
+              {previewTemplate && (
+                <TemplateEditor 
+                  template={previewTemplate} 
+                  onRun={() => {
+                    setIsPreviewDialogOpen(false);
+                    toast({
+                      title: "Preview Mode",
+                      description: "This was just a preview. Click 'Use' on the template card to actually run it.",
+                    });
+                  }}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.map((template) => (
-          <Card key={template.id} className="hover:shadow-md transition-shadow">
+      {/* Enhanced Filters */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search templates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button variant="outline" size="sm">
+            <Filter className="w-4 h-4 mr-2" />
+            More Filters
+          </Button>
+        </div>
+
+        <TemplateCategories
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          counts={getCategoryCounts()}
+        />
+      </div>
+
+      {/* Enhanced Templates Grid */}
+      <div className={viewMode === 'grid' 
+        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+        : "space-y-4"
+      }>
+        {filteredTemplates.map((template, index) => (
+          <EnhancedCard 
+            key={template.id} 
+            interactive
+            className="animate-fade-in"
+            style={{ animationDelay: `${index * 100}ms` }}
+          >
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div className="flex items-center space-x-2">
@@ -578,6 +657,7 @@ export const TemplateManager = () => {
                     size="sm"
                     onClick={() => startPreview(template)}
                     title="Preview"
+                    className="hover:scale-110 transition-transform"
                   >
                     <Eye className="w-4 h-4" />
                   </Button>
@@ -586,6 +666,7 @@ export const TemplateManager = () => {
                     size="sm"
                     onClick={() => startEdit(template)}
                     title="Edit"
+                    className="hover:scale-110 transition-transform"
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
@@ -594,6 +675,7 @@ export const TemplateManager = () => {
                     size="sm" 
                     onClick={() => deleteTemplate(template.id)}
                     title="Delete"
+                    className="hover:scale-110 transition-transform"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -626,6 +708,7 @@ export const TemplateManager = () => {
                     variant="outline" 
                     size="sm"
                     onClick={() => copyTemplate(template)}
+                    className="hover:scale-105 transition-transform"
                   >
                     <Copy className="w-4 h-4 mr-1" />
                     Copy
@@ -633,6 +716,7 @@ export const TemplateManager = () => {
                   <Button 
                     size="sm"
                     onClick={() => setSelectedTemplate(template)}
+                    className="hover:scale-105 transition-transform"
                   >
                     <Play className="w-4 h-4 mr-1" />
                     Use
@@ -640,9 +724,25 @@ export const TemplateManager = () => {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </EnhancedCard>
         ))}
       </div>
+
+      {filteredTemplates.length === 0 && (
+        <div className="text-center py-12">
+          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Templates Found</h3>
+          <p className="text-gray-500 mb-4">
+            {searchQuery ? 'Try adjusting your search terms.' : 'Create your first template to get started.'}
+          </p>
+          {!searchQuery && (
+            <Button onClick={() => {resetNewTemplate(); setIsCreateDialogOpen(true);}}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create First Template
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
