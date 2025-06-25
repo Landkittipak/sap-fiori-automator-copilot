@@ -15,10 +15,14 @@ import {
   GitBranch, 
   Clock, 
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Draggable } from '@/components/ui/draggable';
+import { StepConfigDialog } from '@/components/workflow/StepConfigDialog';
 
 interface WorkflowStep {
   id: string;
@@ -42,6 +46,7 @@ export const WorkflowBuilder = () => {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [currentWorkflow, setCurrentWorkflow] = useState<Workflow | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [editingStep, setEditingStep] = useState<any>(null);
   const { toast } = useToast();
 
   const stepTypes = [
@@ -131,6 +136,52 @@ export const WorkflowBuilder = () => {
     });
   };
 
+  const handleMoveStep = (stepId: string, direction: 'up' | 'down') => {
+    if (!currentWorkflow) return;
+    
+    const currentIndex = currentWorkflow.steps.findIndex(step => step.id === stepId);
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    
+    if (newIndex < 0 || newIndex >= currentWorkflow.steps.length) return;
+
+    reorderSteps(currentIndex, newIndex);
+  };
+
+  const handleDeleteStep = (stepId: string) => {
+    if (!currentWorkflow) return;
+
+    const updatedSteps = currentWorkflow.steps.filter(step => step.id !== stepId);
+    setCurrentWorkflow({
+      ...currentWorkflow,
+      steps: updatedSteps,
+    });
+
+    toast({
+      title: "Step Deleted",
+      description: "Workflow step has been removed.",
+    });
+  };
+
+  const handleUpdateStep = (stepId: string, config: any, name?: string) => {
+    if (!currentWorkflow) return;
+
+    const updatedSteps = currentWorkflow.steps.map(step => 
+      step.id === stepId 
+        ? { ...step, config, ...(name && { name }) }
+        : step
+    );
+
+    setCurrentWorkflow({
+      ...currentWorkflow,
+      steps: updatedSteps,
+    });
+
+    toast({
+      title: "Step Updated",
+      description: "Workflow step has been configured.",
+    });
+  };
+
   const saveWorkflow = () => {
     if (!currentWorkflow) return;
 
@@ -157,6 +208,11 @@ export const WorkflowBuilder = () => {
     if (currentWorkflow?.id === workflow.id) {
       setCurrentWorkflow(updatedWorkflow);
     }
+  };
+
+  const openWorkflow = (workflow: Workflow) => {
+    setCurrentWorkflow(workflow);
+    setIsEditing(false);
   };
 
   return (
@@ -298,6 +354,45 @@ export const WorkflowBuilder = () => {
                                       {stepTypeInfo?.name}
                                     </Badge>
                                   </div>
+                                  
+                                  {isEditing && (
+                                    <div className="flex items-center space-x-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setEditingStep(step)}
+                                        title="Configure step"
+                                      >
+                                        <Settings className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleMoveStep(step.id, 'up')}
+                                        disabled={index === 0}
+                                        title="Move up"
+                                      >
+                                        <ArrowUp className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleMoveStep(step.id, 'down')}
+                                        disabled={index === currentWorkflow.steps.length - 1}
+                                        title="Move down"
+                                      >
+                                        <ArrowDown className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteStep(step.id)}
+                                        title="Delete step"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
                               </Draggable>
                               
@@ -426,7 +521,7 @@ export const WorkflowBuilder = () => {
                     <div className="flex gap-2 pt-2">
                       <Button 
                         size="sm" 
-                        onClick={() => setCurrentWorkflow(workflow)}
+                        onClick={() => openWorkflow(workflow)}
                         className="flex-1"
                       >
                         Open
@@ -460,6 +555,13 @@ export const WorkflowBuilder = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      <StepConfigDialog
+        step={editingStep}
+        isOpen={!!editingStep}
+        onClose={() => setEditingStep(null)}
+        onSave={handleUpdateStep}
+      />
     </div>
   );
 };
