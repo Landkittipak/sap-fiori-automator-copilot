@@ -14,7 +14,8 @@ import {
   Trash2, 
   FileText, 
   Play,
-  Copy
+  Copy,
+  Eye
 } from 'lucide-react';
 import { TemplateEditor } from './templates/TemplateEditor';
 
@@ -71,7 +72,9 @@ export const TemplateManager = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [newTemplate, setNewTemplate] = useState({
     name: '',
     description: '',
@@ -114,6 +117,11 @@ export const TemplateManager = () => {
       inputs: [...template.inputs]
     });
     setIsEditDialogOpen(true);
+  };
+
+  const startPreview = (template: Template) => {
+    setPreviewTemplate(template);
+    setIsPreviewDialogOpen(true);
   };
 
   const saveEdit = () => {
@@ -386,7 +394,7 @@ export const TemplateManager = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Dialog - keeping existing implementation */}
+        {/* Edit Dialog - Enhanced with input field configuration */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -424,7 +432,96 @@ export const TemplateManager = () => {
                     onChange={(e) => setNewTemplate(prev => ({ ...prev, prompt: e.target.value }))}
                     rows={3}
                   />
+                  {newTemplate.prompt && (
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">Detected placeholders:</span>{' '}
+                      {extractPlaceholders(newTemplate.prompt).join(', ') || 'None'}
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* Input Configuration for Edit Dialog */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label>Input Fields</Label>
+                  <Button variant="outline" size="sm" onClick={addInput}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Input
+                  </Button>
+                </div>
+                
+                {newTemplate.inputs.map((input, index) => (
+                  <div key={input.id} className="p-4 border rounded-lg space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Input {index + 1}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => removeInput(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label>ID</Label>
+                        <Input
+                          placeholder="field_name"
+                          value={input.id}
+                          onChange={(e) => updateInput(index, 'id', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Label</Label>
+                        <Input
+                          placeholder="Field Label"
+                          value={input.label}
+                          onChange={(e) => updateInput(index, 'label', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label>Type</Label>
+                        <Select 
+                          value={input.type} 
+                          onValueChange={(value) => updateInput(index, 'type', value as 'text' | 'number' | 'select')}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text">Text</SelectItem>
+                            <SelectItem value="number">Number</SelectItem>
+                            <SelectItem value="select">Select</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Placeholder</Label>
+                        <Input
+                          placeholder="Placeholder text"
+                          value={input.placeholder || ''}
+                          onChange={(e) => updateInput(index, 'placeholder', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    {input.type === 'select' && (
+                      <div className="space-y-1">
+                        <Label>Options (comma-separated)</Label>
+                        <Input
+                          placeholder="Option1, Option2, Option3"
+                          value={input.options?.join(', ') || ''}
+                          onChange={(e) => updateInput(index, 'options', e.target.value.split(',').map(s => s.trim()))}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
 
               <div className="flex justify-end space-x-3">
@@ -436,6 +533,31 @@ export const TemplateManager = () => {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Preview Dialog */}
+        <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Template Preview</DialogTitle>
+              <DialogDescription>
+                See how this template will look when users fill it out
+              </DialogDescription>
+            </DialogHeader>
+            
+            {previewTemplate && (
+              <TemplateEditor 
+                template={previewTemplate} 
+                onRun={() => {
+                  setIsPreviewDialogOpen(false);
+                  toast({
+                    title: "Preview Mode",
+                    description: "This was just a preview. Click 'Use' on the template card to actually run it.",
+                  });
+                }}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -454,7 +576,16 @@ export const TemplateManager = () => {
                   <Button 
                     variant="ghost" 
                     size="sm"
+                    onClick={() => startPreview(template)}
+                    title="Preview"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
                     onClick={() => startEdit(template)}
+                    title="Edit"
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
@@ -462,6 +593,7 @@ export const TemplateManager = () => {
                     variant="ghost" 
                     size="sm" 
                     onClick={() => deleteTemplate(template.id)}
+                    title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
