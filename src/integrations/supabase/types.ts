@@ -9,10 +9,90 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          last_used_at: string | null
+          name: string
+          service: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          last_used_at?: string | null
+          name: string
+          service: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          last_used_at?: string | null
+          name?: string
+          service?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      backup_jobs: {
+        Row: {
+          backup_type: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          progress: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          backup_type: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          progress?: number | null
+          status: string
+          user_id: string
+        }
+        Update: {
+          backup_type?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          progress?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       execution_logs: {
         Row: {
           id: string
+          log_type: string | null
           message: string
+          metadata: Json | null
           run_id: string
           screenshot_url: string | null
           step_number: number
@@ -20,7 +100,9 @@ export type Database = {
         }
         Insert: {
           id?: string
+          log_type?: string | null
           message: string
+          metadata?: Json | null
           run_id: string
           screenshot_url?: string | null
           step_number: number
@@ -28,7 +110,9 @@ export type Database = {
         }
         Update: {
           id?: string
+          log_type?: string | null
           message?: string
+          metadata?: Json | null
           run_id?: string
           screenshot_url?: string | null
           step_number?: number
@@ -68,6 +152,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sap_connections: {
+        Row: {
+          client: string
+          connection_config: Json | null
+          created_at: string
+          host: string
+          id: string
+          is_active: boolean
+          last_tested_at: string | null
+          name: string
+          system_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client: string
+          connection_config?: Json | null
+          created_at?: string
+          host: string
+          id?: string
+          is_active?: boolean
+          last_tested_at?: string | null
+          name: string
+          system_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client?: string
+          connection_config?: Json | null
+          created_at?: string
+          host?: string
+          id?: string
+          is_active?: boolean
+          last_tested_at?: string | null
+          name?: string
+          system_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_runs: {
         Row: {
           created_at: string
@@ -75,8 +201,11 @@ export type Database = {
           custom_task: string | null
           end_time: string | null
           error_message: string | null
+          execution_metadata: Json | null
           id: string
           progress: number
+          sap_system: string | null
+          screenshots: Json | null
           start_time: string
           status: string
           template_id: string | null
@@ -84,6 +213,7 @@ export type Database = {
           template_name: string | null
           updated_at: string
           user_id: string
+          validation_results: Json | null
         }
         Insert: {
           created_at?: string
@@ -91,8 +221,11 @@ export type Database = {
           custom_task?: string | null
           end_time?: string | null
           error_message?: string | null
+          execution_metadata?: Json | null
           id: string
           progress?: number
+          sap_system?: string | null
+          screenshots?: Json | null
           start_time?: string
           status: string
           template_id?: string | null
@@ -100,6 +233,7 @@ export type Database = {
           template_name?: string | null
           updated_at?: string
           user_id: string
+          validation_results?: Json | null
         }
         Update: {
           created_at?: string
@@ -107,8 +241,11 @@ export type Database = {
           custom_task?: string | null
           end_time?: string | null
           error_message?: string | null
+          execution_metadata?: Json | null
           id?: string
           progress?: number
+          sap_system?: string | null
+          screenshots?: Json | null
           start_time?: string
           status?: string
           template_id?: string | null
@@ -116,6 +253,7 @@ export type Database = {
           template_name?: string | null
           updated_at?: string
           user_id?: string
+          validation_results?: Json | null
         }
         Relationships: [
           {
@@ -129,49 +267,129 @@ export type Database = {
       }
       templates: {
         Row: {
+          automation_type: string | null
           created_at: string
           description: string
           id: string
           inputs: Json
           name: string
           prompt: string
+          sap_system: string | null
+          screenshot_config: Json | null
           updated_at: string
           usage_count: number
           user_id: string
+          validation_rules: Json | null
         }
         Insert: {
+          automation_type?: string | null
           created_at?: string
           description: string
           id?: string
           inputs?: Json
           name: string
           prompt: string
+          sap_system?: string | null
+          screenshot_config?: Json | null
           updated_at?: string
           usage_count?: number
           user_id: string
+          validation_rules?: Json | null
         }
         Update: {
+          automation_type?: string | null
           created_at?: string
           description?: string
           id?: string
           inputs?: Json
           name?: string
           prompt?: string
+          sap_system?: string | null
+          screenshot_config?: Json | null
           updated_at?: string
           usage_count?: number
           user_id?: string
+          validation_rules?: Json | null
         }
         Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workflow_steps: {
+        Row: {
+          created_at: string
+          id: string
+          step_config: Json
+          step_order: number
+          step_type: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          step_config?: Json
+          step_order: number
+          step_type: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          step_config?: Json
+          step_order?: number
+          step_type?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -286,6 +504,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user", "viewer"],
+    },
   },
 } as const
