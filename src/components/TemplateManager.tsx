@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   Edit, 
@@ -36,6 +36,8 @@ interface Template {
 }
 
 export const TemplateManager = () => {
+  const { toast } = useToast();
+  
   const [templates, setTemplates] = useState<Template[]>([
     {
       id: 'stock-transfer',
@@ -66,6 +68,7 @@ export const TemplateManager = () => {
   ]);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [newTemplate, setNewTemplate] = useState({
     name: '',
@@ -80,6 +83,74 @@ export const TemplateManager = () => {
       description: '',
       prompt: '',
       inputs: []
+    });
+  };
+
+  const startEdit = (template: Template) => {
+    setEditingTemplate(template);
+    setNewTemplate({
+      name: template.name,
+      description: template.description,
+      prompt: template.prompt,
+      inputs: [...template.inputs]
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const saveEdit = () => {
+    if (!editingTemplate) return;
+    
+    setTemplates(prev => prev.map(t => 
+      t.id === editingTemplate.id 
+        ? { ...t, ...newTemplate }
+        : t
+    ));
+    
+    setIsEditDialogOpen(false);
+    setEditingTemplate(null);
+    resetNewTemplate();
+    
+    toast({
+      title: "Template updated",
+      description: "Template has been successfully updated.",
+    });
+  };
+
+  const deleteTemplate = (id: string) => {
+    setTemplates(prev => prev.filter(t => t.id !== id));
+    toast({
+      title: "Template deleted",
+      description: "Template has been removed from your library.",
+    });
+  };
+
+  const copyTemplate = (template: Template) => {
+    const newTemplate: Template = {
+      ...template,
+      id: `template_${Date.now()}`,
+      name: `${template.name} (Copy)`,
+      usageCount: 0,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    
+    setTemplates(prev => [...prev, newTemplate]);
+    toast({
+      title: "Template copied",
+      description: "A copy of the template has been created.",
+    });
+  };
+
+  const useTemplate = (template: Template) => {
+    // Increment usage count
+    setTemplates(prev => prev.map(t => 
+      t.id === template.id 
+        ? { ...t, usageCount: t.usageCount + 1 }
+        : t
+    ));
+    
+    toast({
+      title: "Template selected",
+      description: "Navigate to the Submit Task page to configure and run this template.",
     });
   };
 
@@ -122,10 +193,11 @@ export const TemplateManager = () => {
     setTemplates(prev => [...prev, template]);
     resetNewTemplate();
     setIsCreateDialogOpen(false);
-  };
-
-  const deleteTemplate = (id: string) => {
-    setTemplates(prev => prev.filter(t => t.id !== id));
+    
+    toast({
+      title: "Template created",
+      description: "New template has been added to your library.",
+    });
   };
 
   const extractPlaceholders = (prompt: string) => {
@@ -289,6 +361,59 @@ export const TemplateManager = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Template</DialogTitle>
+              <DialogDescription>
+                Modify your existing template configuration
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Template Name</Label>
+                  <Input
+                    placeholder="e.g., Stock Transfer"
+                    value={newTemplate.name}
+                    onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input
+                    placeholder="Brief description of what this template does"
+                    value={newTemplate.description}
+                    onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Prompt Template</Label>
+                  <Textarea
+                    placeholder="Write your automation prompt with placeholders like {material}, {quantity}, etc."
+                    value={newTemplate.prompt}
+                    onChange={(e) => setNewTemplate(prev => ({ ...prev, prompt: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={saveEdit} disabled={!newTemplate.name || !newTemplate.prompt}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Templates Grid */}
@@ -302,7 +427,11 @@ export const TemplateManager = () => {
                   <CardTitle className="text-lg">{template.name}</CardTitle>
                 </div>
                 <div className="flex space-x-1">
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => startEdit(template)}
+                  >
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button 
@@ -337,11 +466,18 @@ export const TemplateManager = () => {
                   Used {template.usageCount} times
                 </div>
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => copyTemplate(template)}
+                  >
                     <Copy className="w-4 h-4 mr-1" />
                     Copy
                   </Button>
-                  <Button size="sm">
+                  <Button 
+                    size="sm"
+                    onClick={() => useTemplate(template)}
+                  >
                     <Play className="w-4 h-4 mr-1" />
                     Use
                   </Button>
