@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,26 +7,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   Search, 
-  Filter, 
   Download, 
-  Eye, 
-  RotateCcw,
+  Eye,
   Calendar,
   Clock,
   CheckCircle,
   XCircle,
   Loader,
-  Play
 } from 'lucide-react';
-import { useRunHistory } from '@/hooks/useTaskExecution';
-import { type RunStatus } from '@/services/TaskExecutionService';
+import { useDatabaseRunHistory } from '@/hooks/useDatabaseTaskExecution';
+import { type RunStatus } from '@/services/DatabaseTaskExecutionService';
 
 export const RunHistory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedRun, setSelectedRun] = useState<RunStatus | null>(null);
   
-  const { runs } = useRunHistory();
+  const { runs } = useDatabaseRunHistory();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -70,7 +66,6 @@ export const RunHistory = () => {
   };
 
   const getTaskDescription = (run: RunStatus) => {
-    // Extract a readable task description from the logs or run ID
     const firstLog = run.logs[0];
     return firstLog || 'SAP Automation Task';
   };

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Play, FileText, Bot, CheckCircle } from 'lucide-react';
-import { useTaskExecution } from '@/hooks/useTaskExecution';
+import { useDatabaseTaskExecution } from '@/hooks/useDatabaseTaskExecution';
 import { useToast } from '@/hooks/use-toast';
 
 export const TaskSubmission = () => {
@@ -16,7 +17,7 @@ export const TaskSubmission = () => {
   const [templateInputs, setTemplateInputs] = useState<Record<string, string>>({});
   const [currentRunId, setCurrentRunId] = useState<string>();
   
-  const { status, isLoading, executeTask } = useTaskExecution(currentRunId);
+  const { status, isLoading, executeTask } = useDatabaseTaskExecution(currentRunId);
   const { toast } = useToast();
   
   const templates = [
@@ -75,10 +76,10 @@ export const TaskSubmission = () => {
   const handleSubmit = async () => {
     try {
       const taskData = selectedTemplate && selectedTemplate !== 'none' ? {
-        template: selectedTemplate,
-        templateInputs,
+        template_name: selectedTemplateData?.name,
+        template_inputs: templateInputs,
       } : {
-        customTask: taskInput,
+        custom_task: taskInput,
       };
 
       const runId = await executeTask(taskData);
