@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,8 @@ import {
   ArrowRight,
   Trash2,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Zap
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Draggable } from '@/components/ui/draggable';
@@ -26,7 +26,7 @@ import { StepConfigDialog } from '@/components/workflow/StepConfigDialog';
 
 interface WorkflowStep {
   id: string;
-  type: 'action' | 'condition' | 'delay' | 'approval';
+  type: 'action' | 'condition' | 'delay' | 'approval' | 'cua_automation';
   name: string;
   description: string;
   config: any;
@@ -78,6 +78,13 @@ export const WorkflowBuilder = () => {
       icon: CheckCircle,
       color: 'bg-green-500',
     },
+    {
+      type: 'cua_automation',
+      name: 'Cua Automation',
+      description: 'Trigger Cua AI automation',
+      icon: Zap,
+      color: 'bg-purple-500',
+    },
   ];
 
   const createNewWorkflow = () => {
@@ -102,7 +109,7 @@ export const WorkflowBuilder = () => {
 
     const newStep: WorkflowStep = {
       id: `step_${Date.now()}`,
-      type: stepType as 'action' | 'condition' | 'delay' | 'approval',
+      type: stepType as 'action' | 'condition' | 'delay' | 'approval' | 'cua_automation',
       name: `New ${stepType}`,
       description: '',
       config: {},

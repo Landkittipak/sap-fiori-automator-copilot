@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,10 +18,12 @@ import {
   ArrowUp,
   ArrowDown,
   Settings,
-  Edit
+  Edit,
+  Zap
 } from 'lucide-react';
 import { workflowService, type WorkflowStepConfig } from '@/services/WorkflowService';
 import { StepConfigDialog } from './StepConfigDialog';
+import { CuaStepConfig } from './CuaStepConfig';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkflowStep = Database['public']['Tables']['workflow_steps']['Row'];
@@ -35,6 +36,7 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingStep, setEditingStep] = useState<WorkflowStep | null>(null);
+  const [editingCuaStep, setEditingCuaStep] = useState<WorkflowStep | null>(null);
   const [newStep, setNewStep] = useState({
     type: 'action' as const,
     config: {} as WorkflowStepConfig,
@@ -105,6 +107,25 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
     }
   };
 
+  const handleUpdateCuaStep = async (stepId: string, config: WorkflowStepConfig) => {
+    try {
+      await workflowService.updateWorkflowStep(stepId, config);
+      
+      toast({
+        title: "Success",
+        description: "Cua automation step updated successfully",
+      });
+      
+      loadSteps();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update Cua automation step",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteStep = async (stepId: string) => {
     try {
       await workflowService.deleteWorkflowStep(stepId);
@@ -154,6 +175,7 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
       case 'screenshot': return <Camera className="w-4 h-4" />;
       case 'condition': return <Eye className="w-4 h-4" />;
       case 'loop': return <RotateCcw className="w-4 h-4" />;
+      case 'cua_automation': return <Zap className="w-4 h-4" />;
       default: return <Move className="w-4 h-4" />;
     }
   };
@@ -162,6 +184,8 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
     const config = step.step_config as WorkflowStepConfig;
     
     switch (step.step_type) {
+      case 'cua_automation':
+        return config.description || `Trigger Cua automation: ${config.automationId}`;
       case 'action':
         return config.description || `${config.action || 'Action'} on ${config.selector || 'element'}`;
       case 'condition':
@@ -179,6 +203,13 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
 
   const renderStepConfig = (type: string) => {
     switch (type) {
+      case 'cua_automation':
+        return (
+          <div className="text-sm text-gray-600">
+            Configure after adding step
+          </div>
+        );
+      
       case 'action':
         return (
           <div className="grid grid-cols-3 gap-2">
@@ -312,6 +343,7 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
                   <SelectItem value="screenshot">Screenshot</SelectItem>
                   <SelectItem value="condition">Condition</SelectItem>
                   <SelectItem value="loop">Loop</SelectItem>
+                  <SelectItem value="cua_automation">Cua Automation</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -340,7 +372,13 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
                       {getStepIcon(step.step_type)}
                       Step {step.step_order}
                     </Badge>
-                    <span className="font-medium capitalize">{step.step_type}</span>
+                    <span className="font-medium capitalize">{step.step_type.replace('_', ' ')}</span>
+                    {step.step_type === 'cua_automation' && (
+                      <Badge className="bg-blue-100 text-blue-800">
+                        <Zap className="w-3 h-3 mr-1" />
+                        Cua
+                      </Badge>
+                    )}
                   </div>
                   
                   <p className="text-sm text-gray-600 mb-2">
@@ -348,7 +386,10 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
                   </p>
                   
                   <code className="text-xs bg-gray-100 px-2 py-1 rounded block">
-                    {workflowService.generateStepCode(step)}
+                    {step.step_type === 'cua_automation' 
+                      ? `cuaService.triggerAutomation('${(step.step_config as any).automationId}')`
+                      : workflowService.generateStepCode(step)
+                    }
                   </code>
                 </div>
                 
@@ -356,7 +397,13 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setEditingStep(step)}
+                    onClick={() => {
+                      if (step.step_type === 'cua_automation') {
+                        setEditingCuaStep(step);
+                      } else {
+                        setEditingStep(step);
+                      }
+                    }}
                     title="Configure step"
                   >
                     <Settings className="w-4 h-4" />
@@ -411,6 +458,13 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
         isOpen={!!editingStep}
         onClose={() => setEditingStep(null)}
         onSave={handleUpdateStep}
+      />
+
+      <CuaStepConfig
+        isOpen={!!editingCuaStep}
+        onClose={() => setEditingCuaStep(null)}
+        onSave={(config) => handleUpdateCuaStep(editingCuaStep!.id, config)}
+        initialConfig={editingCuaStep?.step_config}
       />
     </div>
   );
