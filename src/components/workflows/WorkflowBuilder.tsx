@@ -88,6 +88,7 @@ export const WorkflowBuilder = () => {
   ];
 
   const createNewWorkflow = () => {
+    console.log('Creating new workflow...');
     const newWorkflow: Workflow = {
       id: `workflow_${Date.now()}`,
       name: 'New Workflow',
@@ -99,6 +100,16 @@ export const WorkflowBuilder = () => {
     setCurrentWorkflow(newWorkflow);
     setIsEditing(true);
     console.log('Created new workflow:', newWorkflow);
+    
+    toast({
+      title: "New Workflow Created",
+      description: "You can now start building your workflow by adding steps.",
+    });
+  };
+
+  const createFirstWorkflow = () => {
+    console.log('Creating first workflow...');
+    createNewWorkflow();
   };
 
   const addStep = (stepType: string) => {
@@ -230,7 +241,11 @@ export const WorkflowBuilder = () => {
           <h1 className="text-2xl font-semibold text-gray-900">Workflow Builder</h1>
           <p className="text-sm text-gray-600">Create complex, multi-step automation sequences</p>
         </div>
-        <Button onClick={createNewWorkflow} className="bg-gray-900 hover:bg-gray-800">
+        <Button 
+          onClick={createNewWorkflow} 
+          className="bg-gray-900 hover:bg-gray-800"
+          type="button"
+        >
           <Plus className="w-4 h-4 mr-2" />
           New Workflow
         </Button>
@@ -297,21 +312,21 @@ export const WorkflowBuilder = () => {
                       <div className="flex gap-2">
                         {isEditing ? (
                           <>
-                            <Button onClick={saveWorkflow} size="sm">
+                            <Button onClick={saveWorkflow} size="sm" type="button">
                               <Save className="w-4 h-4 mr-2" />
                               Save
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                            <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} type="button">
                               Cancel
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} type="button">
                               <Settings className="w-4 h-4 mr-2" />
                               Edit
                             </Button>
-                            <Button size="sm" onClick={() => executeWorkflow(currentWorkflow)}>
+                            <Button size="sm" onClick={() => executeWorkflow(currentWorkflow)} type="button">
                               <Play className="w-4 h-4 mr-2" />
                               Run
                             </Button>
@@ -328,7 +343,7 @@ export const WorkflowBuilder = () => {
                         <h3 className="text-lg font-medium text-gray-900 mb-2">Empty Workflow</h3>
                         <p className="text-gray-500 mb-6">Add steps from the panel to build your workflow</p>
                         {isEditing && (
-                          <Button variant="outline" onClick={() => addStep('action')}>
+                          <Button variant="outline" onClick={() => addStep('action')} type="button">
                             <Plus className="w-4 h-4 mr-2" />
                             Add First Step
                           </Button>
@@ -369,6 +384,7 @@ export const WorkflowBuilder = () => {
                                         size="sm"
                                         onClick={() => setEditingStep(step)}
                                         title="Configure step"
+                                        type="button"
                                       >
                                         <Settings className="w-4 h-4" />
                                       </Button>
@@ -378,6 +394,7 @@ export const WorkflowBuilder = () => {
                                         onClick={() => handleMoveStep(step.id, 'up')}
                                         disabled={index === 0}
                                         title="Move up"
+                                        type="button"
                                       >
                                         <ArrowUp className="w-4 h-4" />
                                       </Button>
@@ -387,6 +404,7 @@ export const WorkflowBuilder = () => {
                                         onClick={() => handleMoveStep(step.id, 'down')}
                                         disabled={index === currentWorkflow.steps.length - 1}
                                         title="Move down"
+                                        type="button"
                                       >
                                         <ArrowDown className="w-4 h-4" />
                                       </Button>
@@ -395,6 +413,7 @@ export const WorkflowBuilder = () => {
                                         size="sm"
                                         onClick={() => handleDeleteStep(step.id)}
                                         title="Delete step"
+                                        type="button"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </Button>
@@ -433,6 +452,7 @@ export const WorkflowBuilder = () => {
                             variant="outline"
                             className="w-full justify-start h-auto p-4"
                             onClick={() => addStep(stepType.type)}
+                            type="button"
                           >
                             <div className={`p-2 rounded mr-3 ${stepType.color} text-white flex-shrink-0`}>
                               <Icon className="w-4 h-4" />
@@ -481,11 +501,15 @@ export const WorkflowBuilder = () => {
               <Card>
                 <CardContent className="text-center py-16">
                   <GitBranch className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-medium text-gray-900 mb-2">No Workflow Selected</h3>
-                  <p className="text-gray-500 mb-6">Create a new workflow to get started.</p>
-                  <Button onClick={createNewWorkflow}>
+                  <h3 className="text-xl font-medium text-gray-900 mb-2">No Workflows Yet</h3>
+                  <p className="text-gray-500 mb-6">Create your first workflow to automate complex processes.</p>
+                  <Button 
+                    onClick={createFirstWorkflow}
+                    type="button"
+                    className="bg-gray-900 hover:bg-gray-800 text-white"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
-                    Create New Workflow
+                    Create First Workflow
                   </Button>
                 </CardContent>
               </Card>
@@ -530,6 +554,7 @@ export const WorkflowBuilder = () => {
                         size="sm" 
                         onClick={() => openWorkflow(workflow)}
                         className="flex-1"
+                        type="button"
                       >
                         Open
                       </Button>
@@ -537,6 +562,7 @@ export const WorkflowBuilder = () => {
                         size="sm" 
                         variant="outline"
                         onClick={() => executeWorkflow(workflow)}
+                        type="button"
                       >
                         <Play className="w-4 h-4" />
                       </Button>
@@ -552,7 +578,11 @@ export const WorkflowBuilder = () => {
                   <GitBranch className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-xl font-medium text-gray-900 mb-2">No Workflows Yet</h3>
                   <p className="text-gray-500 mb-6">Create your first workflow to automate complex processes.</p>
-                  <Button onClick={createNewWorkflow}>
+                  <Button 
+                    onClick={createNewWorkflow}
+                    type="button"
+                    className="bg-gray-900 hover:bg-gray-800 text-white"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Create First Workflow
                   </Button>
