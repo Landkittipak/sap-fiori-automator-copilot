@@ -23,6 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Draggable } from '@/components/ui/draggable';
 import { StepConfigDialog } from '@/components/workflow/StepConfigDialog';
+import { CuaStepConfig } from '@/components/workflow/CuaStepConfig';
 
 interface WorkflowStep {
   id: string;
@@ -47,6 +48,7 @@ export const WorkflowBuilder = () => {
   const [currentWorkflow, setCurrentWorkflow] = useState<Workflow | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingStep, setEditingStep] = useState<any>(null);
+  const [editingCuaStep, setEditingCuaStep] = useState<any>(null);
   const { toast } = useToast();
 
   const stepTypes = [
@@ -121,7 +123,7 @@ export const WorkflowBuilder = () => {
     const newStep: WorkflowStep = {
       id: `step_${Date.now()}`,
       type: stepType as 'action' | 'condition' | 'delay' | 'approval' | 'cua_automation',
-      name: `New ${stepType}`,
+      name: `New ${stepType.replace('_', ' ')}`,
       description: '',
       config: {},
     };
@@ -200,6 +202,26 @@ export const WorkflowBuilder = () => {
     });
   };
 
+  const handleUpdateCuaStep = (config: any) => {
+    if (!editingCuaStep || !currentWorkflow) return;
+
+    const updatedSteps = currentWorkflow.steps.map(step => 
+      step.id === editingCuaStep.id 
+        ? { ...step, config, name: config.description || step.name }
+        : step
+    );
+
+    setCurrentWorkflow({
+      ...currentWorkflow,
+      steps: updatedSteps,
+    });
+
+    toast({
+      title: "Cua Step Updated",
+      description: "Cua automation step has been configured.",
+    });
+  };
+
   const saveWorkflow = () => {
     if (!currentWorkflow) return;
 
@@ -239,7 +261,7 @@ export const WorkflowBuilder = () => {
       <div className="bg-white border-b px-6 py-4 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Workflow Builder</h1>
-          <p className="text-sm text-gray-600">Create complex, multi-step automation sequences</p>
+          <p className="text-sm text-gray-600">Create complex, multi-step automation sequences with SAP and Cua integration</p>
         </div>
         <Button 
           onClick={createNewWorkflow} 
@@ -372,9 +394,17 @@ export const WorkflowBuilder = () => {
                                     <p className="text-sm text-gray-600 mt-1">
                                       {step.description || stepTypeInfo?.description}
                                     </p>
-                                    <Badge variant="outline" className="mt-2">
-                                      {stepTypeInfo?.name}
-                                    </Badge>
+                                    <div className="flex gap-2 mt-2">
+                                      <Badge variant="outline">
+                                        {stepTypeInfo?.name}
+                                      </Badge>
+                                      {step.type === 'cua_automation' && step.config.automationId && (
+                                        <Badge className="bg-purple-100 text-purple-800">
+                                          <Zap className="w-3 h-3 mr-1" />
+                                          {step.config.automationId}
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
                                   
                                   {isEditing && (
@@ -382,7 +412,13 @@ export const WorkflowBuilder = () => {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => setEditingStep(step)}
+                                        onClick={() => {
+                                          if (step.type === 'cua_automation') {
+                                            setEditingCuaStep(step);
+                                          } else {
+                                            setEditingStep(step);
+                                          }
+                                        }}
                                         title="Configure step"
                                         type="button"
                                       >
@@ -502,7 +538,7 @@ export const WorkflowBuilder = () => {
                 <CardContent className="text-center py-16">
                   <GitBranch className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-xl font-medium text-gray-900 mb-2">No Workflows Yet</h3>
-                  <p className="text-gray-500 mb-6">Create your first workflow to automate complex processes.</p>
+                  <p className="text-gray-500 mb-6">Create your first workflow to automate complex processes with SAP and Cua integration.</p>
                   <Button 
                     onClick={createFirstWorkflow}
                     type="button"
@@ -598,6 +634,13 @@ export const WorkflowBuilder = () => {
         isOpen={!!editingStep}
         onClose={() => setEditingStep(null)}
         onSave={handleUpdateStep}
+      />
+
+      <CuaStepConfig
+        isOpen={!!editingCuaStep}
+        onClose={() => setEditingCuaStep(null)}
+        onSave={handleUpdateCuaStep}
+        initialConfig={editingCuaStep?.config}
       />
     </div>
   );
