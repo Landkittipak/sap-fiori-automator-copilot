@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -287,7 +286,7 @@ export const ExportFunctionality = () => {
                 <Checkbox 
                   id="include-logs" 
                   checked={includeLogs}
-                  onCheckedChange={setIncludeLogs}
+                  onCheckedChange={(checked) => setIncludeLogs(checked === true)}
                 />
                 <label htmlFor="include-logs" className="text-sm">
                   Execution logs and step details
@@ -298,7 +297,7 @@ export const ExportFunctionality = () => {
                 <Checkbox 
                   id="include-screenshots" 
                   checked={includeScreenshots}
-                  onCheckedChange={setIncludeScreenshots}
+                  onCheckedChange={(checked) => setIncludeScreenshots(checked === true)}
                 />
                 <label htmlFor="include-screenshots" className="text-sm">
                   Screenshot references and counts
@@ -309,7 +308,7 @@ export const ExportFunctionality = () => {
                 <Checkbox 
                   id="include-analytics" 
                   checked={includeAnalytics}
-                  onCheckedChange={setIncludeAnalytics}
+                  onCheckedChange={(checked) => setIncludeAnalytics(checked === true)}
                 />
                 <label htmlFor="include-analytics" className="text-sm">
                   Analytics and performance metrics
