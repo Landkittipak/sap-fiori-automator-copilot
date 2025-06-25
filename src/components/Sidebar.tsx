@@ -6,7 +6,6 @@ import {
   FileText, 
   History, 
   Settings,
-  Monitor
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -45,7 +44,7 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
               >
                 <Icon className="w-5 h-5" />
                 <span>{item.label}</span>
-              </div>
+              </button>
             );
           })}
         </nav>
