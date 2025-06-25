@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,12 +6,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Play, FileText, Bot } from 'lucide-react';
+import { Play, FileText, Bot, CheckCircle } from 'lucide-react';
+import { useTaskExecution } from '@/hooks/useTaskExecution';
+import { useToast } from '@/hooks/use-toast';
 
 export const TaskSubmission = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [taskInput, setTaskInput] = useState('');
   const [templateInputs, setTemplateInputs] = useState<Record<string, string>>({});
+  const [currentRunId, setCurrentRunId] = useState<string>();
+  
+  const { status, isLoading, executeTask } = useTaskExecution(currentRunId);
+  const { toast } = useToast();
   
   const templates = [
     {
@@ -67,10 +72,36 @@ export const TaskSubmission = () => {
     return prompt;
   };
 
-  const handleSubmit = () => {
-    const finalPrompt = selectedTemplate ? generatePrompt() : taskInput;
-    console.log('Submitting task:', finalPrompt);
-    // Here you would trigger the c/ua agent
+  const handleSubmit = async () => {
+    try {
+      const taskData = selectedTemplate && selectedTemplate !== 'none' ? {
+        template: selectedTemplate,
+        templateInputs,
+      } : {
+        customTask: taskInput,
+      };
+
+      const runId = await executeTask(taskData);
+      setCurrentRunId(runId);
+      
+      toast({
+        title: "Task Started",
+        description: `Execution started with ID: ${runId}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Execution Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const isFormValid = () => {
+    if (selectedTemplate && selectedTemplate !== 'none') {
+      return selectedTemplateData?.inputs.every(input => templateInputs[input.id]?.trim());
+    }
+    return taskInput.trim().length > 0;
   };
 
   return (
@@ -203,13 +234,74 @@ export const TaskSubmission = () => {
                 onClick={handleSubmit} 
                 className="w-full" 
                 size="lg"
-                disabled={!generatePrompt().trim()}
+                disabled={!isFormValid() || isLoading}
               >
-                <Play className="w-4 h-4 mr-2" />
-                Execute Task
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-b-transparent" />
+                    Starting...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    Execute Task
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
+
+          {/* Live Execution Status */}
+          {status && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  {status.status === 'completed' ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : status.status === 'failed' ? (
+                    <div className="w-5 h-5 rounded-full bg-red-600" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-yellow-500 animate-pulse" />
+                  )}
+                  <span>Live Execution Status</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>Progress</span>
+                    <span>{status.progress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${status.progress}%` }}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Current Step:</p>
+                  <p className="text-sm text-gray-600">{status.currentStep}</p>
+                </div>
+
+                {status.error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded">
+                    <p className="text-sm font-medium text-red-900">Error:</p>
+                    <p className="text-sm text-red-700">{status.error}</p>
+                  </div>
+                )}
+
+                <div className="max-h-32 overflow-y-auto bg-gray-50 p-3 rounded text-xs">
+                  {status.logs.map((log, index) => (
+                    <div key={index} className="mb-1">
+                      <span className="text-gray-500">{index + 1}.</span> {log}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Execution Info */}
           <Card>

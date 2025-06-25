@@ -19,102 +19,15 @@ import {
   Loader,
   Play
 } from 'lucide-react';
-
-interface RunRecord {
-  id: string;
-  task: string;
-  template?: string;
-  status: 'completed' | 'running' | 'failed' | 'queued';
-  startTime: string;
-  endTime?: string;
-  duration?: string;
-  agent: string;
-  screenshots: string[];
-  logs: string[];
-  error?: string;
-}
+import { useRunHistory } from '@/hooks/useTaskExecution';
+import { type RunStatus } from '@/services/TaskExecutionService';
 
 export const RunHistory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedRun, setSelectedRun] = useState<RunRecord | null>(null);
-
-  const runs: RunRecord[] = [
-    {
-      id: 'run_001',
-      task: 'Transfer 100 units of material FG100 from Plant 1710 to 1010',
-      template: 'Stock Transfer',
-      status: 'completed',
-      startTime: '2024-01-24 14:30:00',
-      endTime: '2024-01-24 14:32:15',
-      duration: '2m 15s',
-      agent: 'OpenAI Operator',
-      screenshots: ['step1.png', 'step2.png', 'step3.png'],
-      logs: [
-        'Opening SAP Fiori launchpad',
-        'Navigating to Stock Transfer app',
-        'Entering material code FG100',
-        'Setting quantity to 100',
-        'Selecting source plant 1710',
-        'Selecting destination plant 1010',
-        'Clicking Execute button',
-        'Transfer completed successfully'
-      ]
-    },
-    {
-      id: 'run_002',
-      task: 'Update lead time for material FG200 to 14 days',
-      template: 'Lead Time Update',
-      status: 'running',
-      startTime: '2024-01-24 14:35:00',
-      agent: 'OpenAI Operator',
-      screenshots: ['step1.png', 'step2.png'],
-      logs: [
-        'Opening SAP Fiori launchpad',
-        'Navigating to Material Master app',
-        'Searching for material FG200',
-        'Opening Material Master details...'
-      ]
-    },
-    {
-      id: 'run_003',
-      task: 'Check stock levels for material FG150',
-      template: 'Stock Check',
-      status: 'failed',
-      startTime: '2024-01-24 14:20:00',
-      endTime: '2024-01-24 14:23:45',
-      duration: '3m 45s',
-      agent: 'OpenAI Operator',
-      screenshots: ['step1.png', 'error.png'],
-      logs: [
-        'Opening SAP Fiori launchpad',
-        'Navigating to Stock Overview app',
-        'Entering material code FG150',
-        'Error: Material not found in system'
-      ],
-      error: 'Material FG150 does not exist in the system'
-    },
-    {
-      id: 'run_004',
-      task: 'Create purchase order for vendor 1000 with material FG300',
-      status: 'completed',
-      startTime: '2024-01-24 13:45:00',
-      endTime: '2024-01-24 13:48:30',
-      duration: '3m 30s',
-      agent: 'OpenAI Operator',
-      screenshots: ['step1.png', 'step2.png', 'step3.png', 'final.png'],
-      logs: [
-        'Opening SAP Fiori launchpad',
-        'Navigating to Purchase Order app',
-        'Creating new purchase order',
-        'Setting vendor to 1000',
-        'Adding material FG300',
-        'Setting quantity and delivery date',
-        'Saving purchase order',
-        'PO created with number 4500123456'
-      ]
-    }
-  ];
+  const [selectedRun, setSelectedRun] = useState<RunStatus | null>(null);
+  
+  const { runs } = useRunHistory();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -146,9 +59,26 @@ export const RunHistory = () => {
     }
   };
 
+  const formatDuration = (start: string, end?: string) => {
+    if (!end) return 'Running...';
+    const startTime = new Date(start).getTime();
+    const endTime = new Date(end).getTime();
+    const durationMs = endTime - startTime;
+    const minutes = Math.floor(durationMs / 60000);
+    const seconds = Math.floor((durationMs % 60000) / 1000);
+    return `${minutes}m ${seconds}s`;
+  };
+
+  const getTaskDescription = (run: RunStatus) => {
+    // Extract a readable task description from the logs or run ID
+    const firstLog = run.logs[0];
+    return firstLog || 'SAP Automation Task';
+  };
+
   const filteredRuns = runs.filter(run => {
-    const matchesSearch = run.task.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         run.template?.toLowerCase().includes(searchTerm.toLowerCase());
+    const taskDesc = getTaskDescription(run);
+    const matchesSearch = taskDesc.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         run.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || run.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -174,7 +104,7 @@ export const RunHistory = () => {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search tasks, templates..."
+                placeholder="Search tasks, run IDs..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -204,116 +134,120 @@ export const RunHistory = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredRuns.map((run) => (
-              <div key={run.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-3 mb-2">
-                      {getStatusIcon(run.status)}
-                      <h3 className="font-medium text-gray-900 truncate">{run.task}</h3>
-                      {run.template && (
+            {filteredRuns.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No task executions found.</p>
+                <p className="text-sm">Start by submitting a task from the Task Submission page.</p>
+              </div>
+            ) : (
+              filteredRuns.map((run) => (
+                <div key={run.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-3 mb-2">
+                        {getStatusIcon(run.status)}
+                        <h3 className="font-medium text-gray-900 truncate">{getTaskDescription(run)}</h3>
                         <Badge variant="outline" className="text-xs">
-                          {run.template}
+                          {run.id}
                         </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{run.startTime}</span>
                       </div>
-                      {run.duration && (
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(run.startTime).toLocaleString()}</span>
+                        </div>
                         <div className="flex items-center space-x-1">
                           <Clock className="w-3 h-3" />
-                          <span>{run.duration}</span>
+                          <span>{formatDuration(run.startTime, run.endTime)}</span>
+                        </div>
+                        <span>Progress: {run.progress}%</span>
+                      </div>
+                      {run.status === 'running' && (
+                        <div className="mt-2">
+                          <p className="text-sm text-blue-600">{run.currentStep}</p>
+                          <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                            <div 
+                              className="bg-blue-600 h-1 rounded-full transition-all"
+                              style={{ width: `${run.progress}%` }}
+                            />
+                          </div>
                         </div>
                       )}
-                      <span>Agent: {run.agent}</span>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    {getStatusBadge(run.status)}
-                    <div className="flex space-x-1">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedRun(run)}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Execution Details</DialogTitle>
-                            <DialogDescription>Run ID: {run.id}</DialogDescription>
-                          </DialogHeader>
-                          {selectedRun && (
-                            <div className="space-y-6">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <h4 className="font-medium mb-2">Task Details</h4>
-                                  <div className="space-y-2 text-sm">
-                                    <div><span className="font-medium">Task:</span> {selectedRun.task}</div>
-                                    <div><span className="font-medium">Template:</span> {selectedRun.template || 'Custom'}</div>
-                                    <div><span className="font-medium">Status:</span> {getStatusBadge(selectedRun.status)}</div>
-                                    <div><span className="font-medium">Agent:</span> {selectedRun.agent}</div>
+                    <div className="flex items-center space-x-3">
+                      {getStatusBadge(run.status)}
+                      <div className="flex space-x-1">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedRun(run)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Execution Details</DialogTitle>
+                              <DialogDescription>Run ID: {run.id}</DialogDescription>
+                            </DialogHeader>
+                            {selectedRun && (
+                              <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <h4 className="font-medium mb-2">Task Details</h4>
+                                    <div className="space-y-2 text-sm">
+                                      <div><span className="font-medium">Task:</span> {getTaskDescription(selectedRun)}</div>
+                                      <div><span className="font-medium">Status:</span> {getStatusBadge(selectedRun.status)}</div>
+                                      <div><span className="font-medium">Current Step:</span> {selectedRun.currentStep}</div>
+                                      <div><span className="font-medium">Progress:</span> {selectedRun.progress}%</div>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-medium mb-2">Timing</h4>
+                                    <div className="space-y-2 text-sm">
+                                      <div><span className="font-medium">Start:</span> {new Date(selectedRun.startTime).toLocaleString()}</div>
+                                      {selectedRun.endTime && <div><span className="font-medium">End:</span> {new Date(selectedRun.endTime).toLocaleString()}</div>}
+                                      <div><span className="font-medium">Duration:</span> {formatDuration(selectedRun.startTime, selectedRun.endTime)}</div>
+                                    </div>
                                   </div>
                                 </div>
+                                
+                                {selectedRun.error && (
+                                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                    <h4 className="font-medium text-red-900 mb-2">Error</h4>
+                                    <p className="text-red-700 text-sm">{selectedRun.error}</p>
+                                  </div>
+                                )}
+                                
                                 <div>
-                                  <h4 className="font-medium mb-2">Timing</h4>
-                                  <div className="space-y-2 text-sm">
-                                    <div><span className="font-medium">Start:</span> {selectedRun.startTime}</div>
-                                    {selectedRun.endTime && <div><span className="font-medium">End:</span> {selectedRun.endTime}</div>}
-                                    {selectedRun.duration && <div><span className="font-medium">Duration:</span> {selectedRun.duration}</div>}
+                                  <h4 className="font-medium mb-3">Execution Log</h4>
+                                  <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
+                                    {selectedRun.logs.map((log, index) => (
+                                      <div key={index} className="text-sm text-gray-700 mb-1">
+                                        <span className="text-gray-500">{index + 1}.</span> {log}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <h4 className="font-medium mb-3">Screenshots ({selectedRun.screenshots.length})</h4>
+                                  <div className="grid grid-cols-3 gap-4">
+                                    {selectedRun.screenshots.map((screenshot, index) => (
+                                      <div key={index} className="bg-gray-200 h-24 rounded border flex items-center justify-center text-sm text-gray-500">
+                                        Step {index + 1}
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
                               </div>
-                              
-                              {selectedRun.error && (
-                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                                  <h4 className="font-medium text-red-900 mb-2">Error</h4>
-                                  <p className="text-red-700 text-sm">{selectedRun.error}</p>
-                                </div>
-                              )}
-                              
-                              <div>
-                                <h4 className="font-medium mb-3">Execution Log</h4>
-                                <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
-                                  {selectedRun.logs.map((log, index) => (
-                                    <div key={index} className="text-sm text-gray-700 mb-1">
-                                      <span className="text-gray-500">{index + 1}.</span> {log}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <h4 className="font-medium mb-3">Screenshots ({selectedRun.screenshots.length})</h4>
-                                <div className="grid grid-cols-3 gap-4">
-                                  {selectedRun.screenshots.map((screenshot, index) => (
-                                    <div key={index} className="bg-gray-200 h-24 rounded border flex items-center justify-center text-sm text-gray-500">
-                                      Step {index + 1}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
-                      
-                      {run.status === 'failed' && (
-                        <Button variant="outline" size="sm">
-                          <RotateCcw className="w-4 h-4" />
-                        </Button>
-                      )}
-                      
-                      <Button variant="outline" size="sm">
-                        <Play className="w-4 h-4" />
-                      </Button>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
