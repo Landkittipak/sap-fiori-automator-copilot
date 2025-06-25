@@ -5,8 +5,6 @@ import { TaskSubmission } from '@/components/TaskSubmission';
 import { TemplateManager } from '@/components/TemplateManager';
 import { RunHistory } from '@/components/RunHistory';
 import { Dashboard } from '@/components/Dashboard';
-import { AdvancedAnalyticsDashboard } from '@/components/analytics/AdvancedAnalyticsDashboard';
-import { CustomReportBuilder } from '@/components/reporting/CustomReportBuilder';
 import { WorkflowBuilder } from '@/components/workflows/WorkflowBuilder';
 import { KeyboardShortcutProvider, useKeyboardShortcuts } from '@/contexts/KeyboardShortcutContext';
 import { ShortcutOverlay } from '@/components/shortcuts/ShortcutOverlay';
@@ -24,8 +22,6 @@ const IndexContent = () => {
       { key: 'Ctrl+3', description: 'Go to Workflow Builder', action: () => setActiveView('workflows'), category: 'navigation' as const },
       { key: 'Ctrl+4', description: 'Go to Templates', action: () => setActiveView('templates'), category: 'navigation' as const },
       { key: 'Ctrl+5', description: 'Go to History', action: () => setActiveView('history'), category: 'navigation' as const },
-      { key: 'Ctrl+6', description: 'Go to Analytics', action: () => setActiveView('analytics'), category: 'navigation' as const },
-      { key: 'Ctrl+7', description: 'Go to Reports', action: () => setActiveView('reports'), category: 'navigation' as const },
       { key: 'Ctrl+n', description: 'New Task/Workflow', action: () => {
         if (activeView === 'workflows') {
           // Trigger new workflow creation
@@ -54,10 +50,6 @@ const IndexContent = () => {
         return <TemplateManager />;
       case 'history':
         return <RunHistory />;
-      case 'analytics':
-        return <AdvancedAnalyticsDashboard />;
-      case 'reports':
-        return <CustomReportBuilder />;
       default:
         return <Dashboard />;
     }

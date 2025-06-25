@@ -16,6 +16,7 @@ import {
   Play,
   Copy
 } from 'lucide-react';
+import { TemplateEditor } from './templates/TemplateEditor';
 
 interface TemplateInput {
   id: string;
@@ -67,6 +68,7 @@ export const TemplateManager = () => {
     }
   ]);
 
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
@@ -76,6 +78,23 @@ export const TemplateManager = () => {
     prompt: '',
     inputs: [] as TemplateInput[]
   });
+
+  const handleRunTemplate = (template: Template, inputs: Record<string, any>) => {
+    // Increment usage count
+    setTemplates(prev => prev.map(t => 
+      t.id === template.id 
+        ? { ...t, usageCount: t.usageCount + 1 }
+        : t
+    ));
+    
+    toast({
+      title: "Template Executed",
+      description: `"${template.name}" is now running with your configuration.`,
+    });
+
+    // Clear selection after running
+    setSelectedTemplate(null);
+  };
 
   const resetNewTemplate = () => {
     setNewTemplate({
@@ -140,20 +159,6 @@ export const TemplateManager = () => {
     });
   };
 
-  const useTemplate = (template: Template) => {
-    // Increment usage count
-    setTemplates(prev => prev.map(t => 
-      t.id === template.id 
-        ? { ...t, usageCount: t.usageCount + 1 }
-        : t
-    ));
-    
-    toast({
-      title: "Template selected",
-      description: "Navigate to the Submit Task page to configure and run this template.",
-    });
-  };
-
   const addInput = () => {
     setNewTemplate(prev => ({
       ...prev,
@@ -204,6 +209,25 @@ export const TemplateManager = () => {
     const matches = prompt.match(/\{([^}]+)\}/g);
     return matches ? matches.map(match => match.slice(1, -1)) : [];
   };
+
+  if (selectedTemplate) {
+    return (
+      <div className="p-8 space-y-8">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => setSelectedTemplate(null)}
+          >
+            ← Back to Templates
+          </Button>
+        </div>
+        <TemplateEditor 
+          template={selectedTemplate} 
+          onRun={handleRunTemplate}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8">
@@ -362,7 +386,7 @@ export const TemplateManager = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Dialog */}
+        {/* Edit Dialog - keeping existing implementation */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -476,7 +500,7 @@ export const TemplateManager = () => {
                   </Button>
                   <Button 
                     size="sm"
-                    onClick={() => useTemplate(template)}
+                    onClick={() => setSelectedTemplate(template)}
                   >
                     <Play className="w-4 h-4 mr-1" />
                     Use

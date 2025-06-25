@@ -10,9 +10,7 @@ import {
   User,
   Settings,
   Play,
-  Workflow,
-  BarChart3,
-  FileBarChart
+  Workflow
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,8 +25,6 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
     { id: 'workflows', label: 'Workflow Builder', icon: Workflow, shortcut: 'Ctrl+3', description: 'Multi-step automations', badge: 'New' },
     { id: 'templates', label: 'Templates', icon: FileText, shortcut: 'Ctrl+4' },
     { id: 'history', label: 'Run History', icon: History, shortcut: 'Ctrl+5' },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, shortcut: 'Ctrl+6', badge: 'Enhanced' },
-    { id: 'reports', label: 'Custom Reports', icon: FileBarChart, shortcut: 'Ctrl+7', badge: 'New' },
   ];
 
   return (
