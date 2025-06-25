@@ -17,9 +17,12 @@ import {
   CheckCircle, 
   RotateCcw,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Settings,
+  Edit
 } from 'lucide-react';
 import { workflowService, type WorkflowStepConfig } from '@/services/WorkflowService';
+import { StepConfigDialog } from './StepConfigDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type WorkflowStep = Database['public']['Tables']['workflow_steps']['Row'];
@@ -31,6 +34,7 @@ interface WorkflowBuilderProps {
 export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingStep, setEditingStep] = useState<WorkflowStep | null>(null);
   const [newStep, setNewStep] = useState({
     type: 'action' as const,
     config: {} as WorkflowStepConfig,
@@ -79,6 +83,25 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateStep = async (stepId: string, config: WorkflowStepConfig, name?: string) => {
+    try {
+      await workflowService.updateWorkflowStep(stepId, config);
+      
+      toast({
+        title: "Success",
+        description: "Workflow step updated successfully",
+      });
+      
+      loadSteps();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update workflow step",
+        variant: "destructive",
+      });
     }
   };
 
@@ -132,6 +155,25 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
       case 'condition': return <Eye className="w-4 h-4" />;
       case 'loop': return <RotateCcw className="w-4 h-4" />;
       default: return <Move className="w-4 h-4" />;
+    }
+  };
+
+  const getStepDescription = (step: WorkflowStep) => {
+    const config = step.step_config as WorkflowStepConfig;
+    
+    switch (step.step_type) {
+      case 'action':
+        return config.description || `${config.action || 'Action'} on ${config.selector || 'element'}`;
+      case 'condition':
+        return config.description || `Check ${config.conditionType || 'condition'} on ${config.selector || 'element'}`;
+      case 'validation':
+        return config.description || `Validate ${config.validation?.rule || 'rule'} on ${config.selector || 'element'}`;
+      case 'delay':
+        return config.description || `Wait for ${config.duration || 'specified'} seconds`;
+      case 'loop':
+        return config.description || `Repeat ${config.value || 'N'} times`;
+      default:
+        return config.description || 'Step configuration';
     }
   };
 
@@ -292,13 +334,20 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
           <Card key={step.id} className="border-l-4 border-blue-500">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    {getStepIcon(step.step_type)}
-                    Step {step.step_order}
-                  </Badge>
-                  <span className="font-medium capitalize">{step.step_type}</span>
-                  <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      {getStepIcon(step.step_type)}
+                      Step {step.step_order}
+                    </Badge>
+                    <span className="font-medium capitalize">{step.step_type}</span>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 mb-2">
+                    {getStepDescription(step)}
+                  </p>
+                  
+                  <code className="text-xs bg-gray-100 px-2 py-1 rounded block">
                     {workflowService.generateStepCode(step)}
                   </code>
                 </div>
@@ -307,8 +356,17 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => setEditingStep(step)}
+                    title="Configure step"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleMoveStep(step.id, 'up')}
                     disabled={index === 0}
+                    title="Move up"
                   >
                     <ArrowUp className="w-4 h-4" />
                   </Button>
@@ -317,6 +375,7 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
                     size="sm"
                     onClick={() => handleMoveStep(step.id, 'down')}
                     disabled={index === steps.length - 1}
+                    title="Move down"
                   >
                     <ArrowDown className="w-4 h-4" />
                   </Button>
@@ -324,6 +383,7 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDeleteStep(step.id)}
+                    title="Delete step"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -345,6 +405,13 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
           </Card>
         )}
       </div>
+
+      <StepConfigDialog
+        step={editingStep}
+        isOpen={!!editingStep}
+        onClose={() => setEditingStep(null)}
+        onSave={handleUpdateStep}
+      />
     </div>
   );
 };
