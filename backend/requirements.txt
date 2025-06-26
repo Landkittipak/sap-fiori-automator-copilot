@@ -1,9 +1,21 @@
+# Core FastAPI and server dependencies
 fastapi==0.115.0
-uvicorn==0.32.0
-websockets==12.0
-python-dotenv
+uvicorn[standard]==0.32.0
+python-multipart==0.0.6
+python-dotenv==1.0.0
+
+# Async HTTP client for CUA API integration
+httpx==0.25.2
+
+# Data validation and serialization
 pydantic==2.11.1
+
+# WebSocket support for real-time communication
+websockets==12.0
+
+# File handling for enhanced functionality
+aiofiles==23.2.1
+
+# CUA SDK packages (optional, falls back to HTTP API if not available)
 cua-computer==0.3.0
 cua-agent==0.2.15
-python-multipart==0.0.6
-aiofiles==23.2.1 
