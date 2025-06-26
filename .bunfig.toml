@@ -1,0 +1,22 @@
+[install]
+# Use exact versions for better reproducibility
+exact = true
+
+[install.scopes]
+# Configure any scoped packages if needed
+
+[test]
+# Test configuration
+preload = ["./src/test-setup.ts"]
+
+[run]
+# Run configuration
+bun = true
+
+[install.cache]
+# Enable caching for faster installs
+dir = ".bun"
+
+[install.registry]
+# Use npm registry
+url = "https://registry.npmjs.org/" 

@@ -1,34 +1,44 @@
 #!/usr/bin/env python3
 """
 SAP Fiori Automator Backend
-Integrates with C/ua agents for real browser automation
+Comprehensive integration with C/ua agents supporting both HTTP API and SDK approaches
 """
 
 import asyncio
 import json
 import os
 import uuid
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import httpx
 import uvicorn
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Environment variables
 CUA_API_KEY = os.getenv("CUA_API_KEY", "")
 CUA_BASE_URL = os.getenv("CUA_BASE_URL", "https://api.trycua.com/v1")
 SAP_FIORI_URL = os.getenv("SAP_FIORI_URL", "http://localhost:8080")
 
-app = FastAPI(title="SAP Fiori Automator Backend", version="1.0.0")
+app = FastAPI(title="SAP Fiori Automator Backend", version="2.0.0")
 
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:3000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,7 +58,7 @@ class AutomationRequest(BaseModel):
 
 class ExecutionStatus(BaseModel):
     run_id: str
-    status: str  # "running", "completed", "failed"
+    status: str  # "queued", "running", "completed", "failed", "cancelled"
     current_step: Optional[int] = None
     total_steps: int
     results: Dict[str, Any] = {}
@@ -56,8 +66,24 @@ class ExecutionStatus(BaseModel):
     started_at: datetime
     completed_at: Optional[datetime] = None
 
-# In-memory storage (in production, use a proper database)
+# Additional models for SDK integration
+class CuaTask(BaseModel):
+    task: str
+    agent_id: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = None
+
+class TaskResult(BaseModel):
+    task_id: str
+    status: str
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    timestamp: datetime
+
+# Global state
 executions: Dict[str, ExecutionStatus] = {}
+active_agents: Dict[str, Any] = {}
+active_tasks: Dict[str, Dict[str, Any]] = {}
+websocket_connections: List[WebSocket] = []
 
 @dataclass
 class CuaAgent:
@@ -65,16 +91,16 @@ class CuaAgent:
     agent_id: str
     status: str
     browser_type: str = "chrome"
-    
+
 class CuaAutomationService:
-    """Service for interacting with CUA agents"""
+    """Service for HTTP API-based CUA integration"""
     
     def __init__(self):
         self.api_key = CUA_API_KEY
         self.base_url = CUA_BASE_URL
         
     async def create_agent(self) -> str:
-        """Create a new CUA agent in the cloud"""
+        """Create a new CUA agent in the cloud via HTTP API"""
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/agents",
@@ -93,7 +119,7 @@ class CuaAutomationService:
             return data["agent_id"]
     
     async def execute_browser_action(self, agent_id: str, action: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute a browser action on the CUA agent"""
+        """Execute a browser action on the CUA agent via HTTP API"""
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
                 f"{self.base_url}/agents/{agent_id}/actions",
@@ -130,11 +156,148 @@ class CuaAutomationService:
                 headers={"Authorization": f"Bearer {self.api_key}"}
             )
 
+class CuaSDKService:
+    """Service for SDK-based CUA integration"""
+    
+    def __init__(self):
+        self.agents = {}
+        self.task_queue = asyncio.Queue()
+        
+    async def create_agent(self, agent_type: str = "macos", agent_id: str = None):
+        """Create a CUA agent using SDK"""
+        try:
+            # Try to import CUA SDK modules
+            try:
+                from computer import Computer
+                from agent import ComputerAgent, AgentLoop, LLMProvider, LLM
+                
+                # Create computer instance
+                computer = Computer(os_type=agent_type)
+                
+                # Create agent
+                agent = ComputerAgent(
+                    computer=computer,
+                    loop=AgentLoop.OPENAI,
+                    model=LLM(provider=LLMProvider.OPENAI),
+                    save_trajectory=True,
+                    only_n_most_recent_images=3,
+                    verbosity=logging.INFO
+                )
+                
+                agent_id = agent_id or f"{agent_type}-{len(self.agents)}"
+                self.agents[agent_id] = {
+                    "agent": agent,
+                    "computer": computer,
+                    "status": "idle",
+                    "current_task": None,
+                    "created_at": datetime.now()
+                }
+                
+                logger.info(f"Created CUA SDK agent: {agent_id}")
+                return agent_id
+                
+            except ImportError:
+                logger.warning("CUA SDK not available, falling back to HTTP API")
+                # Fall back to HTTP API
+                http_service = CuaAutomationService()
+                return await http_service.create_agent()
+                
+        except Exception as e:
+            logger.error(f"Error creating CUA agent: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to create agent: {str(e)}")
+    
+    async def execute_task(self, task: str, agent_id: str = None) -> str:
+        """Execute a CUA task using SDK"""
+        try:
+            # Get or create agent
+            if not agent_id or agent_id not in self.agents:
+                agent_id = await self.create_agent()
+            
+            agent_info = self.agents[agent_id]
+            agent = agent_info["agent"]
+            
+            # Generate task ID
+            task_id = f"task-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{len(active_tasks)}"
+            
+            # Update agent status
+            agent_info["status"] = "running"
+            agent_info["current_task"] = task
+            
+            # Store task info
+            active_tasks[task_id] = {
+                "task": task,
+                "agent_id": agent_id,
+                "status": "running",
+                "start_time": datetime.now(),
+                "result": None,
+                "error": None
+            }
+            
+            # Execute task asynchronously
+            asyncio.create_task(self._execute_task_async(task_id, agent, task))
+            
+            return task_id
+            
+        except Exception as e:
+            logger.error(f"Error executing task: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to execute task: {str(e)}")
+    
+    async def _execute_task_async(self, task_id: str, agent: Any, task: str):
+        """Execute task asynchronously"""
+        try:
+            result = await agent.execute(task)
+            
+            # Update task status
+            active_tasks[task_id]["status"] = "completed"
+            active_tasks[task_id]["result"] = result
+            active_tasks[task_id]["end_time"] = datetime.now()
+            
+            # Update agent status
+            agent_info = next((info for info in self.agents.values() if info["agent"] == agent), None)
+            if agent_info:
+                agent_info["status"] = "idle"
+                agent_info["current_task"] = None
+            
+            # Notify WebSocket clients
+            await self._notify_websocket_clients(task_id, "completed", result)
+            
+        except Exception as e:
+            logger.error(f"Task execution failed: {e}")
+            active_tasks[task_id]["status"] = "failed"
+            active_tasks[task_id]["error"] = str(e)
+            active_tasks[task_id]["end_time"] = datetime.now()
+            
+            # Notify WebSocket clients
+            await self._notify_websocket_clients(task_id, "failed", None, str(e))
+    
+    async def _notify_websocket_clients(self, task_id: str, status: str, result: Any = None, error: str = None):
+        """Notify all connected WebSocket clients"""
+        message = {
+            "type": "task_update",
+            "task_id": task_id,
+            "status": status,
+            "result": result,
+            "error": error,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        disconnected_clients = []
+        for websocket in websocket_connections:
+            try:
+                await websocket.send_text(json.dumps(message))
+            except:
+                disconnected_clients.append(websocket)
+        
+        # Remove disconnected clients
+        for websocket in disconnected_clients:
+            websocket_connections.remove(websocket)
+
 class WorkflowExecutor:
-    """Executes workflows using CUA agents"""
+    """Executes workflows using CUA agents (HTTP API approach)"""
     
     def __init__(self):
         self.cua_service = CuaAutomationService()
+        self.cua_sdk_service = CuaSDKService()
     
     async def execute_workflow(self, run_id: str, request: AutomationRequest):
         """Execute a complete workflow"""
@@ -158,6 +321,9 @@ class WorkflowExecutor:
                 step_result = await self._execute_step(agent_id, step, request.template_inputs)
                 execution.results[f"step_{i+1}"] = step_result
                 
+                # Notify WebSocket clients of progress
+                await self._notify_workflow_progress(run_id, execution)
+                
             execution.status = "completed"
             execution.completed_at = datetime.now()
             
@@ -173,6 +339,33 @@ class WorkflowExecutor:
                     await self.cua_service.destroy_agent(agent_id)
                 except:
                     pass  # Best effort cleanup
+            
+            # Final WebSocket notification
+            await self._notify_workflow_progress(run_id, execution)
+    
+    async def _notify_workflow_progress(self, run_id: str, execution: ExecutionStatus):
+        """Notify WebSocket clients of workflow progress"""
+        message = {
+            "type": "workflow_update",
+            "run_id": run_id,
+            "status": execution.status,
+            "current_step": execution.current_step,
+            "total_steps": execution.total_steps,
+            "results": execution.results,
+            "error": execution.error,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        disconnected_clients = []
+        for websocket in websocket_connections:
+            try:
+                await websocket.send_text(json.dumps(message))
+            except:
+                disconnected_clients.append(websocket)
+        
+        # Remove disconnected clients
+        for websocket in disconnected_clients:
+            websocket_connections.remove(websocket)
     
     async def _navigate_to_sap(self, agent_id: str, sap_url: str):
         """Navigate to SAP Fiori URL"""
@@ -291,11 +484,12 @@ class WorkflowExecutor:
 
 # Initialize services
 workflow_executor = WorkflowExecutor()
+cua_sdk_service = CuaSDKService()
 
-# API endpoints
+# HTTP API endpoints
 @app.get("/")
 async def root():
-    return {"message": "SAP Fiori Automator Backend", "status": "running"}
+    return {"message": "SAP Fiori Automator Backend", "status": "running", "version": "2.0.0"}
 
 @app.get("/health")
 async def health_check():
@@ -303,7 +497,7 @@ async def health_check():
 
 @app.post("/execute")
 async def execute_workflow(request: AutomationRequest, background_tasks: BackgroundTasks):
-    """Start workflow execution"""
+    """Start workflow execution using HTTP API approach"""
     if not CUA_API_KEY:
         raise HTTPException(status_code=500, detail="CUA_API_KEY not configured")
     
@@ -361,6 +555,74 @@ async def test_cua_connection():
         return {"status": "success", "message": "CUA connection successful"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+# SDK-based endpoints
+@app.post("/cua/task")
+async def execute_cua_task(task: CuaTask):
+    """Execute a CUA task using SDK approach"""
+    try:
+        task_id = await cua_sdk_service.execute_task(task.task, task.agent_id)
+        return {"task_id": task_id, "status": "queued"}
+    except Exception as e:
+        logger.error(f"Error executing CUA task: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/cua/task/{task_id}")
+async def get_task_status(task_id: str):
+    """Get CUA task status"""
+    if task_id not in active_tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task_info = active_tasks[task_id]
+    return TaskResult(
+        task_id=task_id,
+        status=task_info["status"],
+        result=task_info.get("result"),
+        error=task_info.get("error"),
+        timestamp=task_info["start_time"]
+    )
+
+@app.get("/cua/agents")
+async def list_agents():
+    """List active CUA agents"""
+    agents_info = {}
+    for agent_id, info in cua_sdk_service.agents.items():
+        agents_info[agent_id] = {
+            "status": info["status"],
+            "current_task": info["current_task"],
+            "created_at": info["created_at"].isoformat()
+        }
+    return {"agents": agents_info}
+
+# WebSocket endpoint
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time updates"""
+    await websocket.accept()
+    websocket_connections.append(websocket)
+    
+    try:
+        while True:
+            # Keep connection alive and handle incoming messages
+            data = await websocket.receive_text()
+            message = json.loads(data)
+            
+            # Handle different message types
+            if message.get("type") == "ping":
+                await websocket.send_text(json.dumps({"type": "pong"}))
+            elif message.get("type") == "subscribe":
+                # Client wants to subscribe to specific updates
+                await websocket.send_text(json.dumps({
+                    "type": "subscribed",
+                    "message": "Connected to real-time updates"
+                }))
+                
+    except WebSocketDisconnect:
+        websocket_connections.remove(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        if websocket in websocket_connections:
+            websocket_connections.remove(websocket)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

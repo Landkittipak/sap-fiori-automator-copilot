@@ -1,205 +1,208 @@
+# SAP Fiori Automator Copilot
 
-# SAP Copilot - Intelligent SAP Automation Platform
-
-SAP Copilot is a modern web application that provides intelligent automation capabilities for SAP systems. Built with React, TypeScript, and Supabase, it offers a comprehensive platform for creating, managing, and executing SAP automation tasks.
+A comprehensive automation platform for SAP Fiori systems with integrated C/ua (Computer-Use Agents) for intelligent desktop automation.
 
 ## 🚀 Features
 
-### Core Functionality
-- **Task Automation**: Execute SAP operations with pre-built and custom templates
-- **Real-time Monitoring**: Track task execution with live progress updates
-- **Template Management**: Create, edit, and organize automation templates
-- **Run History**: Comprehensive logging and tracking of all executions
+- **SAP Fiori Automation**: Automated login, navigation, and data entry
+- **C/ua Integration**: AI-powered desktop automation agents
+- **Real-time Monitoring**: Live status updates and progress tracking
+- **Quick Tasks**: Pre-configured automation templates
+- **Custom Workflows**: Build complex automation sequences
+- **Agent Management**: Create and monitor multiple CUA agents
+- **Modern UI**: Beautiful, responsive interface built with React and Tailwind CSS
 
-### Advanced Features
-- **Analytics Dashboard**: Performance insights, success rates, and usage analytics
-- **Template Marketplace**: Discover and install community-created templates
-- **Bulk Operations**: Execute multiple tasks efficiently with CSV upload
-- **Export & Reports**: Download execution data in multiple formats
-- **User Profile Management**: Customizable preferences and settings
+## 🎯 Quick Start
 
-### Technical Features
-- **Authentication**: Secure user authentication with email/password and Google OAuth
-- **Database Integration**: Full Supabase integration with Row Level Security
-- **Real-time Updates**: Live task status updates using Supabase Realtime
-- **Responsive Design**: Mobile-friendly interface with Tailwind CSS
-- **Type Safety**: Full TypeScript implementation
+### Prerequisites
 
-## 🛠️ Technology Stack
+- **Node.js 18+** and **Bun** package manager
+- **Python 3.12+** for CUA backend
+- **C/ua API Key** (get one at [trycua.com](https://trycua.com))
 
-- **Frontend**: React 18, TypeScript, Vite
-- **UI Framework**: Tailwind CSS, shadcn/ui components
-- **Backend**: Supabase (PostgreSQL, Authentication, Real-time)
-- **Charts**: Recharts for analytics visualization
-- **State Management**: React hooks, Supabase client
-- **Build Tool**: Vite for fast development and building
+### Installation
 
-## 📋 Prerequisites
+1. **Clone the repository:**
+   ```bash
+   git clone <your-repo-url>
+   cd sap-fiori-automator-copilot
+   ```
 
-- Node.js 18+ or Bun
-- A Supabase account and project
-- Google OAuth credentials (optional, for Google sign-in)
+2. **Install dependencies:**
+   ```bash
+   bun run setup
+   ```
 
-## ⚡ Quick Start
+3. **Configure environment:**
+   ```bash
+   # Edit .env file with your C/ua API key
+   cp .env.example .env
+   # Add your VITE_CUA_API_KEY
+   ```
 
-### 1. Clone and Install
+4. **Start all services:**
+   ```bash
+   bun run start:all
+   ```
 
-```bash
-git clone <repository-url>
-cd sap-copilot
-npm install  # or: bun install
+5. **Access the application:**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Docs: http://localhost:8000/docs
+
+## 🏗️ Architecture
+
+### Frontend (React + TypeScript)
+- Modern UI with shadcn/ui components
+- Real-time WebSocket updates
+- Responsive design for all devices
+- TypeScript for type safety
+
+### Backend (Python FastAPI)
+- CUA agent management
+- Task execution and monitoring
+- WebSocket support for real-time updates
+- RESTful API with automatic documentation
+
+### C/ua Integration
+- AI-powered desktop automation
+- Natural language task execution
+- Multi-agent support
+- Real-time progress tracking
+
+## 📊 Usage Examples
+
+### Quick Tasks
+Execute common SAP operations with one click:
+- SAP Login automation
+- Data entry and form filling
+- Report generation and download
+- Navigation to specific screens
+
+### Custom Tasks
+Use natural language to describe automation tasks:
+```
+"Open SAP Fiori, login with my credentials, navigate to transaction MM60, 
+and fill in the material master data form"
 ```
 
-### 2. Environment Setup
-
-The application uses Supabase for backend services. The Supabase configuration is already included in the codebase:
-
-- **Supabase URL**: `https://psqdqpazmvrrhkyiqwom.supabase.co`
-- **Public Key**: Already configured in `src/integrations/supabase/client.ts`
-
-### 3. Database Setup
-
-The database schema is automatically created through Supabase migrations. The following tables are included:
-
-- `profiles` - User profile information
-- `templates` - Automation templates
-- `task_runs` - Task execution records
-- `execution_logs` - Detailed execution logs
-
-### 4. Authentication Configuration
-
-#### Email Authentication
-1. Go to your [Supabase Dashboard](https://supabase.com/dashboard/project/psqdqpazmvrrhkyiqwom/auth/url-configuration)
-2. Set your site URL and redirect URLs:
-   - **Site URL**: Your application URL (e.g., `https://yourdomain.com`)
-   - **Redirect URLs**: Add your application URL
-
-#### Google OAuth (Optional)
-1. Go to [Supabase Auth Providers](https://supabase.com/dashboard/project/psqdqpazmvrrhkyiqwom/auth/providers)
-2. Enable Google provider
-3. Add your Google OAuth credentials
-
-#### Disable Email Confirmation (Development)
-For easier testing, you can disable email confirmation:
-1. Go to [Auth Settings](https://supabase.com/dashboard/project/psqdqpazmvrrhkyiqwom/auth/url-configuration)
-2. Turn off "Enable email confirmations"
-
-### 5. Run the Application
-
-```bash
-npm run dev  # or: bun dev
-```
-
-The application will be available at `http://localhost:5173`
-
-## 📁 Project Structure
-
-```
-src/
-├── components/          # React components
-│   ├── analytics/      # Analytics dashboard components
-│   ├── bulk/          # Bulk operations components
-│   ├── export/        # Export functionality components
-│   ├── marketplace/   # Template marketplace components
-│   ├── profile/       # User profile components
-│   └── ui/           # Reusable UI components
-├── hooks/              # Custom React hooks
-├── integrations/       # External service integrations
-│   └── supabase/      # Supabase client and types
-├── services/          # Business logic services
-└── pages/             # Application pages
-```
+### Workflow Builder
+Create complex automation sequences:
+1. Login to SAP system
+2. Navigate to specific transaction
+3. Fill forms with data
+4. Submit and capture results
+5. Generate reports
 
 ## 🔧 Configuration
 
-### Supabase Configuration
-
-The application is pre-configured to work with the included Supabase project. If you need to use your own Supabase project:
-
-1. Update `src/integrations/supabase/client.ts` with your project credentials
-2. Run the database migrations from `supabase/migrations/`
-3. Update the authentication settings in your Supabase dashboard
-
 ### Environment Variables
-
-No environment variables are required for basic functionality. All configuration is handled through the Supabase client.
-
-## 🚀 Deployment
-
-### Option 1: Lovable Platform (Recommended)
-The application is ready to deploy on the Lovable platform:
-1. Click the "Publish" button in the Lovable editor
-2. Your app will be automatically deployed and accessible
-
-### Option 2: Custom Deployment
-The application can be deployed to any static hosting service:
-
 ```bash
-npm run build  # or: bun run build
+# C/ua Configuration
+VITE_CUA_API_KEY=your_cua_api_key
+VITE_CUA_BACKEND_URL=http://localhost:8000
+
+# SAP Configuration
+VITE_SAP_URL=your_sap_system_url
+VITE_SAP_USERNAME=your_username
+
+# Database Configuration
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_key
 ```
 
-Deploy the `dist/` folder to your hosting service of choice:
-- Vercel
-- Netlify
-- GitHub Pages
-- AWS S3 + CloudFront
+### Backend Configuration
+The CUA backend can be configured in `backend/main.py`:
+- Agent types and models
+- Task execution parameters
+- Logging and monitoring settings
 
-### Domain Configuration
-For custom domains, update the Supabase authentication settings:
-1. Add your domain to the allowed redirect URLs
-2. Update the site URL in Supabase settings
+## 📈 Monitoring
 
-## 📊 Usage Guide
+### Real-time Dashboard
+- Agent status and health
+- Task execution progress
+- Success rates and performance metrics
+- Live WebSocket updates
 
-### Getting Started
-1. **Sign Up**: Create an account using email/password or Google OAuth
-2. **Explore Templates**: Browse pre-built automation templates
-3. **Submit Tasks**: Execute automation tasks with the task submission interface
-4. **Monitor Progress**: Track executions in real-time with the run history
+### Logs and Debugging
+- Backend logs: `backend/logs/`
+- Frontend console logs
+- WebSocket connection status
+- Task execution history
 
-### Advanced Features
-- **Analytics**: View performance metrics and usage insights
-- **Bulk Operations**: Upload CSV files to execute multiple tasks
-- **Template Marketplace**: Install community templates
-- **Export Data**: Download execution logs and analytics reports
+## 🚨 Troubleshooting
+
+### Common Issues
+
+1. **Backend Connection Failed**
+   ```bash
+   # Check Python installation
+   python3 --version
+   
+   # Check backend status
+   curl http://localhost:8000/health
+   ```
+
+2. **CUA Agent Issues**
+   ```bash
+   # Verify API key
+   echo $VITE_CUA_API_KEY
+   
+   # Check agent status
+   curl http://localhost:8000/agents
+   ```
+
+3. **Frontend Issues**
+   ```bash
+   # Check dependencies
+   bun install
+   
+   # Clear cache
+   rm -rf node_modules/.vite
+   ```
 
 ## 🔒 Security
 
-- **Row Level Security**: All database operations are secured with RLS policies
-- **Authentication**: Secure user authentication through Supabase Auth
-- **Data Isolation**: Users can only access their own data
-- **HTTPS**: All communications are encrypted in transit
+- API keys stored in environment variables
+- CORS configuration for secure communication
+- Input validation and sanitization
+- Audit logging for all operations
+
+## 📚 Documentation
+
+- [CUA Integration Guide](CUA_INTEGRATION.md) - Detailed CUA setup and usage
+- [API Documentation](http://localhost:8000/docs) - Interactive API docs
+- [Component Library](src/components/ui/) - UI component documentation
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-If you encounter any issues:
+- Check the [troubleshooting guide](#troubleshooting)
+- Review [CUA documentation](https://github.com/trycua/cua)
+- Open an issue on GitHub
+- Contact the development team
 
-1. Check the [Supabase Dashboard](https://supabase.com/dashboard/project/psqdqpazmvrrhkyiqwom) for database issues
-2. Verify authentication settings in Supabase
-3. Check browser console for error messages
-4. Ensure all dependencies are installed correctly
+## 🎉 What's Next?
 
-## 🔮 Roadmap
-
-- [ ] Real SAP system integration
-- [ ] Advanced workflow automation
-- [ ] Mobile application
-- [ ] API endpoints for external integrations
-- [ ] Advanced role-based access control
-- [ ] Multi-tenant support
+- [ ] Advanced workflow designer
+- [ ] Task scheduling and automation
+- [ ] Integration with more SAP modules
+- [ ] Machine learning for task optimization
+- [ ] Enterprise deployment support
+- [ ] Mobile application support
 
 ---
 
-**Built with ❤️ using React, TypeScript, and Supabase**
+**Built with ❤️ using React, TypeScript, Python, and C/ua**

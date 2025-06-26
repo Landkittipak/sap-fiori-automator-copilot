@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,8 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Zap } from 'lucide-react';
-import { cuaService } from '@/services/CuaService';
+import CuaService from '@/services/CuaService';
 import { useToast } from '@/hooks/use-toast';
+
+// Create a singleton instance
+const cuaService = new CuaService();
 
 interface CuaAutomation {
   id: string;
