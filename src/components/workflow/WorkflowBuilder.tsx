@@ -25,6 +25,7 @@ import { workflowService, type WorkflowStepConfig } from '@/services/WorkflowSer
 import { StepConfigDialog } from './StepConfigDialog';
 import { CuaStepConfig } from './CuaStepConfig';
 import type { Database } from '@/integrations/supabase/types';
+import { cuaWorkflowService } from '@/services/CuaWorkflowService';
 
 type WorkflowStep = Database['public']['Tables']['workflow_steps']['Row'];
 
@@ -42,10 +43,26 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
     config: {} as WorkflowStepConfig,
   });
   const { toast } = useToast();
+  const [running, setRunning] = useState(false);
 
   useEffect(() => {
-    loadSteps();
+    // Restore from localStorage if present
+    const draft = localStorage.getItem(`workflow_draft_${templateId}`);
+    if (draft) {
+      try {
+        setSteps(JSON.parse(draft));
+      } catch {}
+    } else {
+      loadSteps();
+    }
   }, [templateId]);
+
+  // Auto-save steps to localStorage on every change
+  useEffect(() => {
+    if (steps && steps.length > 0) {
+      localStorage.setItem(`workflow_draft_${templateId}`, JSON.stringify(steps));
+    }
+  }, [steps, templateId]);
 
   const loadSteps = async () => {
     try {
@@ -313,6 +330,48 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
     }
   };
 
+  const handleRunWorkflow = async () => {
+    setRunning(true);
+    try {
+      // Build workflow object
+      const workflow = {
+        name: `Workflow for ${templateId}`,
+        description: '',
+        steps: steps.map((step) => {
+          // Map step to CUA workflow step format
+          const config = step.step_config as WorkflowStepConfig;
+          if (step.step_type === 'cua_automation') {
+            return {
+              type: 'cua' as const,
+              task: config.description || '',
+              data: config,
+            };
+          } else {
+            // For now, treat all other steps as 'api' type with their config as data
+            return {
+              type: 'api' as const,
+              task: config.description || '',
+              data: config,
+            };
+          }
+        }),
+      };
+      const result = await cuaWorkflowService.executeWorkflow(workflow);
+      toast({
+        title: 'Workflow Started',
+        description: `Workflow execution started. ID: ${result.workflow_id}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error?.message || 'Failed to execute workflow',
+        variant: 'destructive',
+      });
+    } finally {
+      setRunning(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -466,6 +525,12 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
         onSave={(config) => handleUpdateCuaStep(editingCuaStep!.id, config)}
         initialConfig={editingCuaStep?.step_config}
       />
+
+      <div className="flex justify-end pt-4">
+        <Button onClick={handleRunWorkflow} disabled={steps.length === 0 || running}>
+          {running ? 'Running...' : 'Run Workflow'}
+        </Button>
+      </div>
     </div>
   );
 };
