@@ -200,76 +200,76 @@ export const Dashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">
-                      {stat.title}
-                    </CardTitle>
-                    <Icon className="h-4 w-4 text-gray-600" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                    <p className="text-xs text-green-600 mt-1">
-                      {stat.change}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={index}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {stat.title}
+                </CardTitle>
+                <Icon className="h-4 w-4 text-gray-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                <p className="text-xs text-green-600 mt-1">
+                  {stat.change}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="h-5 w-5" />
                   Quick Actions
                 </CardTitle>
                 <CardDescription>Run common SAP tasks with CUA agents</CardDescription>
-              </CardHeader>
+          </CardHeader>
               <CardContent>
                 <CuaQuickTasks />
-              </CardContent>
-            </Card>
+          </CardContent>
+        </Card>
 
-            {/* Recent Runs */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Runs</CardTitle>
-                <CardDescription>Latest automation task executions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentRuns.length > 0 ? recentRuns.map((run) => (
-                    <div key={run.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {run.task}
-                        </p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          {getStatusBadge(run.status)}
-                          <span className="text-xs text-gray-500">{run.duration}</span>
-                          <span className="text-xs text-gray-500">•</span>
-                          <span className="text-xs text-gray-500">{run.timestamp}</span>
-                        </div>
-                      </div>
+        {/* Recent Runs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Runs</CardTitle>
+            <CardDescription>Latest automation task executions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentRuns.length > 0 ? recentRuns.map((run) => (
+                <div key={run.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {run.task}
+                    </p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      {getStatusBadge(run.status)}
+                      <span className="text-xs text-gray-500">{run.duration}</span>
+                      <span className="text-xs text-gray-500">•</span>
+                      <span className="text-xs text-gray-500">{run.timestamp}</span>
                     </div>
-                  )) : (
-                    <div className="text-center py-4 text-gray-500">
-                      <p>No recent executions</p>
-                      <p className="text-sm">Start by submitting a task</p>
-                    </div>
-                  )}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )) : (
+                <div className="text-center py-4 text-gray-500">
+                  <p>No recent executions</p>
+                  <p className="text-sm">Start by submitting a task</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
         </TabsContent>
 
         <TabsContent value="cua">

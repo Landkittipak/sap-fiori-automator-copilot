@@ -53,7 +53,7 @@ export const WorkflowBuilder = ({ templateId }: WorkflowBuilderProps) => {
         setSteps(JSON.parse(draft));
       } catch {}
     } else {
-      loadSteps();
+    loadSteps();
     }
   }, [templateId]);
 

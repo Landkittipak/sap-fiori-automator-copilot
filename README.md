@@ -34,14 +34,14 @@ A comprehensive automation platform for SAP Fiori systems with integrated C/ua (
    ```
 
 3. **Configure environment:**
-   ```bash
+```bash
    # Edit .env file with your C/ua API key
    cp .env.example .env
    # Add your VITE_CUA_API_KEY
    ```
 
 4. **Start all services:**
-   ```bash
+```bash
    bun run start:all
    ```
 

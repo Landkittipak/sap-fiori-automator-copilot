@@ -75,13 +75,13 @@ export const CuaStepConfig = ({ isOpen, onClose, onSave, initialConfig }: CuaSte
           description: description || `Custom core automation: ${customActionType} ${customActionValue}`,
         };
       } else {
-        const parsedInputs = inputs ? JSON.parse(inputs) : {};
+      const parsedInputs = inputs ? JSON.parse(inputs) : {};
         config = {
-          automationId: selectedAutomation,
-          inputs: parsedInputs,
-          waitForCompletion,
-          description: description || `Trigger Cua automation`,
-        };
+        automationId: selectedAutomation,
+        inputs: parsedInputs,
+        waitForCompletion,
+        description: description || `Trigger Cua automation`,
+      };
       }
       onSave(config);
       onClose();
@@ -230,19 +230,19 @@ export const CuaStepConfig = ({ isOpen, onClose, onSave, initialConfig }: CuaSte
 
           {/* Raw JSON textarea for advanced users */}
           {advancedMode && (
-            <div>
-              <Label>Inputs (JSON)</Label>
-              <Textarea
-                value={inputs}
-                onChange={(e) => setInputs(e.target.value)}
-                placeholder='{"key": "value", "param": "data"}'
-                rows={4}
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Provide inputs as JSON. You can use template variables like {'{template_input_name}'}
-              </p>
-            </div>
+          <div>
+            <Label>Inputs (JSON)</Label>
+            <Textarea
+              value={inputs}
+              onChange={(e) => setInputs(e.target.value)}
+              placeholder='{"key": "value", "param": "data"}'
+              rows={4}
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Provide inputs as JSON. You can use template variables like {'{template_input_name}'}
+            </p>
+          </div>
           )}
 
           <div className="flex items-center space-x-2">
